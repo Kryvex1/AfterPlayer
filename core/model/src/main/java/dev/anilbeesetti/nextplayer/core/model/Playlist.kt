@@ -2,6 +2,7 @@ package dev.anilbeesetti.nextplayer.core.model
 
 enum class PlaylistType {
     LOCAL,
+    URL,
     M3U_URL,
     M3U_FILE,
 }

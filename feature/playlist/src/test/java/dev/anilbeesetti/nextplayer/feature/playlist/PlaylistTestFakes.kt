@@ -35,6 +35,8 @@ internal class FakePlaylistRepository : PlaylistRepository {
 
     override suspend fun create(name: String, videoUris: List<String>): Long = createdId
 
+    override suspend fun createUrlPlaylist(name: String, uri: String, title: String?): Long = createdId
+
     override suspend fun createM3U(
         type: PlaylistType,
         source: String,
@@ -58,6 +60,8 @@ internal class FakePlaylistRepository : PlaylistRepository {
     override suspend fun delete(playlistId: Long) = Unit
 
     override suspend fun addVideos(playlistId: Long, videoUris: List<String>): Int = 0
+
+    override suspend fun addUrlItem(playlistId: Long, uri: String, title: String?): Boolean = true
 
     override suspend fun removeVideo(playlistId: Long, videoUri: String) = Unit
 

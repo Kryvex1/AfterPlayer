@@ -54,6 +54,7 @@ interface MediaRepository {
     suspend fun getVideoState(uri: String): VideoState?
     suspend fun getMediaInfo(uri: String): MediaInfo?
     suspend fun clearPlaybackHistory()
+    suspend fun removeVideosFromPlaybackHistory(uris: List<String>)
     suspend fun updateMediumLastPlayedTime(uri: String, lastPlayedTime: Long, duration: Long? = null)
     suspend fun updateMediumPosition(uri: String, position: Long)
     suspend fun updateMediumPlaybackSpeed(uri: String, playbackSpeed: Float)

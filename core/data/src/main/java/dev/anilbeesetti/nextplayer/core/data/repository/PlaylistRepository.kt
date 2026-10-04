@@ -17,6 +17,8 @@ interface PlaylistRepository {
 
     suspend fun create(name: String, videoUris: List<String> = emptyList()): Long
 
+    suspend fun createUrlPlaylist(name: String, uri: String, title: String? = null): Long
+
     suspend fun createM3U(
         type: PlaylistType,
         source: String,
@@ -30,6 +32,8 @@ interface PlaylistRepository {
     suspend fun delete(playlistId: Long)
 
     suspend fun addVideos(playlistId: Long, videoUris: List<String>): Int
+
+    suspend fun addUrlItem(playlistId: Long, uri: String, title: String? = null): Boolean
 
     suspend fun removeVideo(playlistId: Long, videoUri: String)
 

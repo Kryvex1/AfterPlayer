@@ -43,6 +43,7 @@ fun BoxScope.DecoderSelectorView(
     audioMode: DecoderMode?,
     onVideoModeSelected: (DecoderMode) -> Unit,
     onAudioModeSelected: (DecoderMode) -> Unit,
+    onDismiss: () -> Unit = {},
 ) {
     var selectedTrackType by rememberSaveable { mutableStateOf(DecoderTrackType.VIDEO) }
 
@@ -50,6 +51,7 @@ fun BoxScope.DecoderSelectorView(
         modifier = modifier,
         show = show,
         title = stringResource(R.string.select_decoders),
+        onDismiss = onDismiss,
     ) {
         Column(
             modifier = Modifier
@@ -67,9 +69,12 @@ fun BoxScope.DecoderSelectorView(
                     DecoderTrackType.VIDEO -> videoMode
                     DecoderTrackType.AUDIO -> audioMode
                 },
-                onModeSelected = when (selectedTrackType) {
-                    DecoderTrackType.VIDEO -> onVideoModeSelected
-                    DecoderTrackType.AUDIO -> onAudioModeSelected
+                onModeSelected = { mode ->
+                    when (selectedTrackType) {
+                        DecoderTrackType.VIDEO -> onVideoModeSelected(mode)
+                        DecoderTrackType.AUDIO -> onAudioModeSelected(mode)
+                    }
+                    onDismiss()
                 },
             )
         }

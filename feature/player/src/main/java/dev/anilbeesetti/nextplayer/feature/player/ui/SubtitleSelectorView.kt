@@ -66,6 +66,7 @@ fun BoxScope.SubtitleSelectorView(
         modifier = modifier,
         show = show,
         title = stringResource(R.string.select_subtitle_track),
+        onDismiss = onDismiss,
     ) {
         Column(
             modifier = Modifier

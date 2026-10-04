@@ -19,9 +19,17 @@
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
 
+    <queries>
+        <package android:name="androidx.car.app.connection" />
+        <intent>
+            <action android:name="androidx.car.app.connection.action.CAR_CONNECTION_UPDATED" />
+        </intent>
+    </queries>
+
     <application
         android:name=".NextPlayerApplication"
         android:allowBackup="true"
+        android:hardwareAccelerated="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"

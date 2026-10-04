@@ -165,6 +165,7 @@ internal fun PlaylistListScreenContent(
         PlaylistCreationDialog.CHOOSER -> CreationChooserDialog(
             onDismissRequest = { onAction(PlaylistUiAction.DismissCreation) },
             onCreateLocal = { onAction(PlaylistUiAction.ChooseLocalPlaylist) },
+            onCreateUrlPlaylist = { onAction(PlaylistUiAction.ChooseUrlPlaylist) },
             onCreateUrl = { onAction(PlaylistUiAction.ChooseM3UUrl) },
             onCreateFile = {
                 onAction(PlaylistUiAction.DismissCreation)
@@ -179,6 +180,15 @@ internal fun PlaylistListScreenContent(
             error = state.saveActionState.errorMessage,
             onDismissRequest = { onAction(PlaylistUiAction.DismissCreation) },
             onConfirm = { onAction(PlaylistUiAction.CreateLocal(it)) },
+        )
+
+        PlaylistCreationDialog.URL_PLAYLIST -> CreateUrlPlaylistDialog(
+            isSaving = state.saveActionState.isRunning,
+            error = state.saveActionState.errorMessage,
+            onDismissRequest = { onAction(PlaylistUiAction.DismissCreation) },
+            onConfirm = { name, url, title ->
+                onAction(PlaylistUiAction.CreateUrlPlaylist(name, url, title))
+            },
         )
 
         PlaylistCreationDialog.M3U_URL -> M3UUrlDialog(
@@ -234,6 +244,7 @@ internal fun PlaylistListScreenContent(
 private fun CreationChooserDialog(
     onDismissRequest: () -> Unit,
     onCreateLocal: () -> Unit,
+    onCreateUrlPlaylist: () -> Unit,
     onCreateUrl: () -> Unit,
     onCreateFile: () -> Unit,
 ) {
@@ -246,6 +257,11 @@ private fun CreationChooserDialog(
                     label = stringResource(R.string.create_local_playlist),
                     icon = NextIcons.Add,
                     onClick = onCreateLocal,
+                )
+                CreationChoice(
+                    label = stringResource(R.string.create_url_playlist),
+                    icon = NextIcons.Play,
+                    onClick = onCreateUrlPlaylist,
                 )
                 CreationChoice(
                     label = stringResource(R.string.add_m3u_url_playlist),
@@ -262,6 +278,88 @@ private fun CreationChooserDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismissRequest, modifier = Modifier.tvFocusRing()) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun CreateUrlPlaylistDialog(
+    isSaving: Boolean,
+    error: String?,
+    onDismissRequest: () -> Unit,
+    onConfirm: (name: String, url: String, title: String?) -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var url by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
+    val trimmedName = name.trim()
+    val trimmedUrl = url.trim()
+    val isValid = remember(trimmedName, trimmedUrl) {
+        trimmedName.isNotEmpty() && trimmedUrl.isHttpUrl()
+    }
+
+    NextDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.create_url_playlist)) },
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NextOutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.playlist_name)) },
+                    placeholder = { Text(stringResource(R.string.enter_title_hint)) },
+                    singleLine = true,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                NextOutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.stream_url)) },
+                    placeholder = { Text(stringResource(R.string.enter_url_hint)) },
+                    singleLine = true,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                NextOutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.url_title)) },
+                    placeholder = { Text(stringResource(R.string.enter_title_hint)) },
+                    singleLine = true,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (error != null) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(trimmedName, trimmedUrl, title.trim().takeIf { it.isNotBlank() }) },
+                enabled = isValid && !isSaving,
+                modifier = Modifier.tvFocusRing(),
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(stringResource(R.string.create))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                enabled = !isSaving,
+                modifier = Modifier.tvFocusRing(),
+            ) {
                 Text(stringResource(R.string.cancel))
             }
         },
@@ -491,6 +589,7 @@ private fun PlaylistRow(
 private fun PlaylistType.label(): String = stringResource(
     when (this) {
         PlaylistType.LOCAL -> R.string.local_playlist
+        PlaylistType.URL -> R.string.url_playlist
         PlaylistType.M3U_URL -> R.string.m3u_url_playlist
         PlaylistType.M3U_FILE -> R.string.m3u_file_playlist
     },

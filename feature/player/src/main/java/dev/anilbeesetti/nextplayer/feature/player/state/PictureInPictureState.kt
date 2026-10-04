@@ -105,6 +105,16 @@ class PictureInPictureState(
         if (pictureInPicture == null) return
         if (rect.width() <= 0 || rect.height() <= 0) return
 
+        val prev = sourceRectHint
+        if (prev != null &&
+            kotlin.math.abs(prev.left - rect.left) < 8 &&
+            kotlin.math.abs(prev.top - rect.top) < 8 &&
+            kotlin.math.abs(prev.right - rect.right) < 8 &&
+            kotlin.math.abs(prev.bottom - rect.bottom) < 8
+        ) {
+            return
+        }
+
         val newSourceRectHint = Rect(rect)
         val newAspectRatio = Rational(newSourceRectHint.width(), newSourceRectHint.height())
             .takeIf { it.toFloat() in 0.5f..2.39f }

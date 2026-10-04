@@ -1,10 +1,17 @@
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.media3.common.Player
 import androidx.media3.extractor.metadata.Chapter
 import dev.anilbeesetti.nextplayer.core.model.VideoContentScale
@@ -30,17 +37,18 @@ fun BoxScope.OverlayShowView(
     onSubtitleOptionEvent: (SubtitleOptionsEvent) -> Unit = {},
     onVideoContentScaleChanged: (VideoContentScale) -> Unit = {},
 ) {
-    Box(
-        modifier = Modifier
-            .matchParentSize()
-            .then(
-                if (overlayView != null) {
-                    Modifier.noRippleClickable(onClick = onDismiss)
-                } else {
-                    Modifier
-                },
-            ),
-    )
+    AnimatedVisibility(
+        visible = overlayView != null,
+        enter = fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)),
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+                .noRippleClickable(onClick = onDismiss),
+        )
+    }
 
     AudioTrackSelectorView(
         show = overlayView == OverlayView.AUDIO_SELECTOR,
@@ -55,6 +63,7 @@ fun BoxScope.OverlayShowView(
         audioMode = audioDecoderMode,
         onVideoModeSelected = onVideoDecoderModeSelected,
         onAudioModeSelected = onAudioDecoderModeSelected,
+        onDismiss = onDismiss,
     )
 
     SubtitleSelectorView(

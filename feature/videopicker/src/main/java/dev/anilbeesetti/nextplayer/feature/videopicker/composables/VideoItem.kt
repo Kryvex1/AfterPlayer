@@ -260,16 +260,8 @@ private fun ThumbnailView(
 ) {
     val context = LocalContext.current
     val isLocalVideo = remember(video.uriString) { video.isLocalUri() }
-    val isNew by produceState(
-        initialValue = video.isNew(thresholdDays = preferences.newVideoThresholdDays),
-        key1 = video.dateAdded,
-        key2 = video.lastPlayedAt,
-        key3 = preferences.newVideoThresholdDays,
-    ) {
-        while (value) {
-            delay(60.seconds)
-            value = video.isNew(thresholdDays = preferences.newVideoThresholdDays)
-        }
+    val isNew = remember(video.dateAdded, video.lastPlayedAt, preferences.newVideoThresholdDays) {
+        video.isNew(thresholdDays = preferences.newVideoThresholdDays)
     }
     Box(
         modifier = modifier
@@ -286,11 +278,16 @@ private fun ThumbnailView(
                 .fillMaxSize(0.5f),
         )
         if (preferences.showThumbnailField && isLocalVideo) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
+            val imageRequest = remember(video.uriString) {
+                ImageRequest.Builder(context)
                     .data(video.uriString)
-                    .crossfade(true)
-                    .build(),
+                    .memoryCacheKey(video.uriString)
+                    .diskCacheKey(video.uriString)
+                    .crossfade(false)
+                    .build()
+            }
+            AsyncImage(
+                model = imageRequest,
                 contentDescription = null,
                 alignment = Alignment.Center,
                 contentScale = ContentScale.Crop,

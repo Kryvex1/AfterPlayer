@@ -37,6 +37,13 @@ class LocalPlaylistRepository(
             uris = videoUris.distinct(),
         )
 
+    override suspend fun createUrlPlaylist(name: String, uri: String, title: String?): Long =
+        playlistDao.createUrlPlaylist(
+            name = name.validatedName(),
+            uri = uri.trim(),
+            title = title?.trim(),
+        )
+
     override suspend fun createM3U(
         type: PlaylistType,
         source: String,
@@ -77,6 +84,11 @@ class LocalPlaylistRepository(
     override suspend fun addVideos(playlistId: Long, videoUris: List<String>): Int {
         playlistDao.requireLocalPlaylist(playlistId)
         return playlistDao.addItems(playlistId, videoUris.distinct())
+    }
+
+    override suspend fun addUrlItem(playlistId: Long, uri: String, title: String?): Boolean {
+        playlistDao.requireLocalPlaylist(playlistId)
+        return playlistDao.addUrlItem(playlistId, uri.trim(), title?.trim())
     }
 
     override suspend fun removeVideo(playlistId: Long, videoUri: String) {

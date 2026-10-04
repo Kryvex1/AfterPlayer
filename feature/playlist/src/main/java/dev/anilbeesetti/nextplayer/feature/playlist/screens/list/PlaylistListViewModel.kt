@@ -65,6 +65,7 @@ class PlaylistListViewModel(
             is PlaylistUiAction.OnPlaylistClick -> output.openPlaylist(action.playlist.id)
             is PlaylistUiAction.ShowCreationChooser -> showCreationDialog(PlaylistCreationDialog.CHOOSER)
             is PlaylistUiAction.ChooseLocalPlaylist -> showCreationDialog(PlaylistCreationDialog.LOCAL_NAME)
+            is PlaylistUiAction.ChooseUrlPlaylist -> showCreationDialog(PlaylistCreationDialog.URL_PLAYLIST)
             is PlaylistUiAction.ChooseM3UUrl -> showCreationDialog(PlaylistCreationDialog.M3U_URL)
             is PlaylistUiAction.DismissCreation -> showCreationDialog(PlaylistCreationDialog.NONE)
             is PlaylistUiAction.ShowRenameDialogFor -> stateInternal.update {
@@ -80,6 +81,7 @@ class PlaylistListViewModel(
                 it.copy(showDeleteDialogFor = null, saveActionState = ActionState.Idle)
             }
             is PlaylistUiAction.CreateLocal -> createLocal(action.name)
+            is PlaylistUiAction.CreateUrlPlaylist -> createUrlPlaylist(action.name, action.url, action.title)
             is PlaylistUiAction.CreateM3UUrl -> createM3UUrl(action.url)
             is PlaylistUiAction.Rename -> rename(action.playlistId, action.name)
             is PlaylistUiAction.Delete -> delete(action.playlistId)
@@ -117,6 +119,14 @@ class PlaylistListViewModel(
     private fun createLocal(name: String) {
         save {
             val playlistId = playlistRepository.create(name)
+            stateInternal.update { it.copy(creationDialog = PlaylistCreationDialog.NONE) }
+            output.openPlaylist(playlistId)
+        }
+    }
+
+    private fun createUrlPlaylist(name: String, url: String, title: String?) {
+        save {
+            val playlistId = playlistRepository.createUrlPlaylist(name, url, title)
             stateInternal.update { it.copy(creationDialog = PlaylistCreationDialog.NONE) }
             output.openPlaylist(playlistId)
         }
@@ -239,6 +249,7 @@ enum class PlaylistCreationDialog {
     NONE,
     CHOOSER,
     LOCAL_NAME,
+    URL_PLAYLIST,
     M3U_URL,
 }
 
@@ -258,6 +269,7 @@ sealed interface PlaylistUiAction {
     data class OnPlaylistClick(val playlist: PlaylistSummary) : PlaylistUiAction
     data object ShowCreationChooser : PlaylistUiAction
     data object ChooseLocalPlaylist : PlaylistUiAction
+    data object ChooseUrlPlaylist : PlaylistUiAction
     data object ChooseM3UUrl : PlaylistUiAction
     data object DismissCreation : PlaylistUiAction
     data class ShowRenameDialogFor(val playlist: PlaylistSummary) : PlaylistUiAction
@@ -265,6 +277,7 @@ sealed interface PlaylistUiAction {
     data class ShowDeleteDialogFor(val playlist: PlaylistSummary) : PlaylistUiAction
     data object DismissDeleteDialog : PlaylistUiAction
     data class CreateLocal(val name: String) : PlaylistUiAction
+    data class CreateUrlPlaylist(val name: String, val url: String, val title: String? = null) : PlaylistUiAction
     data class CreateM3UUrl(val url: String) : PlaylistUiAction
     data class Rename(val playlistId: Long, val name: String) : PlaylistUiAction
     data class Delete(val playlistId: Long) : PlaylistUiAction

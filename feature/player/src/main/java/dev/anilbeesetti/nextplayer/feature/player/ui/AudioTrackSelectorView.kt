@@ -55,6 +55,7 @@ fun BoxScope.AudioTrackSelectorView(
         modifier = modifier,
         show = show,
         title = stringResource(R.string.select_audio_track),
+        onDismiss = onDismiss,
     ) {
         Column(
             modifier = Modifier

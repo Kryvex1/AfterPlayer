@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Next Player</string>
+    <string name="app_name" translatable="false">After Player</string>
+    <string name="add">Add</string>
+    <string name="close">Close</string>
+    <string name="add_url">Add URL</string>
+    <string name="url_title">Title</string>
+    <string name="stream_url">Stream / Video URL</string>
+    <string name="enter_url_hint">https://example.com/video.mp4</string>
+    <string name="enter_title_hint">Enter title</string>
+    <string name="delete_selected">Delete selected</string>
+    <string name="delete_selected_confirmation">Delete %1$d selected item(s) from history?</string>
+    <string name="add_stream_url">Add Stream URL</string>
+    <string name="items_selected">%1$d selected</string>
     <string name="about_description">Version, support, credits</string>
     <string name="about_name">About</string>
     <string name="appearance_description">Adjust the app to your liking</string>
@@ -24,10 +35,10 @@
     <string name="navigate_up">Navigate up</string>
     <string name="no_videos_found">No videos found</string>
     <string name="open_settings">Open Settings</string>
-    <string name="permission_info">The Next Player app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission.</string>
+    <string name="permission_info">After Player needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission.</string>
     <string name="permission_not_granted">Permission Not Granted</string>
     <string name="permission_request">Permission Request</string>
-    <string name="permission_settings">The Next Player app needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission from settings since it was permanently denied.</string>
+    <string name="permission_settings">After Player needs \"%1$s\" permission to access and play media. Without it, media access and playback won\'t work. To use the app fully, grant the permission from settings since it was permanently denied.</string>
     <string name="player_controls_exit">Navigate up</string>
     <string name="player_controls_next">Player next</string>
     <string name="player_controls_play_pause">Player play pause</string>
@@ -57,7 +68,7 @@
     <string name="size">Size</string>
     <string name="sort">Sort</string>
     <string name="title">Title</string>
-    <string name="title_activity_player">Next Player Activity</string>
+    <string name="title_activity_player">After Player Activity</string>
     <string name="unknown_error">An unknown error has occurred</string>
     <string name="playback">Playback</string>
     <string name="interface_name">Interface</string>
@@ -237,9 +248,15 @@
     <string name="loop_mode_off">Loop: Off</string>
     <string name="loop_mode_one">Loop: One</string>
     <string name="loop_mode_all">Loop: All</string>
-    <string name="app_developer" translatable="false">anilbeesetti</string>
+    <string name="app_developer" translatable="false">Umang Sattawan</string>
     <string name="by">by %1$s</string>
     <string name="libraries">Libraries</string>
+    <string name="community">Community</string>
+    <string name="telegram">Telegram</string>
+    <string name="telegram_channel">Telegram Channel</string>
+    <string name="telegram_channel_desc">Join @AfterPlayer on Telegram</string>
+    <string name="join_telegram">Join Channel</string>
+    <string name="contact_developer">Contact @UmangSattawan</string>
     <string name="github">Github</string>
     <string name="donate">Donate</string>
     <string name="error_opening_link">No app found to handle this link</string>
@@ -459,6 +476,7 @@
     <string name="create_playlist">Create playlist</string>
     <string name="choose_playlist_type">Create a playlist</string>
     <string name="create_local_playlist">Create local playlist</string>
+    <string name="create_url_playlist">Create URL playlist</string>
     <string name="add_m3u_url_playlist">Add M3U playlist from URL</string>
     <string name="add_m3u_file_playlist">Add M3U playlist from file</string>
     <string name="playlist_url">M3U URL</string>
@@ -466,6 +484,7 @@
     <string name="invalid_url">Enter a valid HTTP or HTTPS URL.</string>
     <string name="m3u_url_playlist">M3U URL</string>
     <string name="m3u_file_playlist">M3U File</string>
+    <string name="url_playlist">URL Stream</string>
     <string name="m3u_file_permission_failed">Couldn\'t keep access to this file. Choose it again or use another file.</string>
     <string name="refresh_playlist">Refresh playlist</string>
     <string name="refreshing_playlist">Refreshing playlist</string>

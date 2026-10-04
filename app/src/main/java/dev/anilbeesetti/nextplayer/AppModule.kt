@@ -4,6 +4,7 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
+import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import dev.anilbeesetti.nextplayer.core.common.di.DispatchersModule
@@ -47,14 +48,21 @@ class AppModule {
                 ),
             )
         }
+        .memoryCachePolicy(CachePolicy.ENABLED)
+        .memoryCache {
+            MemoryCache.Builder()
+                .maxSizePercent(context, 0.25)
+                .strongReferencesEnabled(true)
+                .build()
+        }
         .diskCachePolicy(CachePolicy.ENABLED)
         .diskCache(
             DiskCache.Builder()
                 .fileSystem(FileSystem.SYSTEM)
-                .directory(context.filesDir.resolve("thumbnails"))
-                .maxSizePercent(1.0)
+                .directory(context.cacheDir.resolve("thumbnails"))
+                .maxSizePercent(0.05)
                 .build(),
         )
-        .crossfade(true)
+        .crossfade(false)
         .build()
 }

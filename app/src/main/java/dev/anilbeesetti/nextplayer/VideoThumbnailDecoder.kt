@@ -92,44 +92,65 @@ class VideoThumbnailDecoder(
         }
 
         // Cache miss OR cache insufficient: decode fresh thumbnail
-        val rawBitmap = MediaMetadataRetriever().use { nativeRetriever ->
-            MediaThumbnailRetriever().use { ffmpegRetriever ->
-                nativeRetriever.setDataSource(source)
-                ffmpegRetriever.setDataSource(source)
+        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 512 }, options.size.height.pxOrElse { 512 })
+        val targetWidth = requestedDstSize.width.pxOrElse { 512 }.coerceAtLeast(128)
+        val targetHeight = requestedDstSize.height.pxOrElse { 512 }.coerceAtLeast(128)
 
-                // First, try to get embedded picture (album art/metadata thumbnail)
-                val embeddedPicture = nativeRetriever.embeddedPicture ?: ffmpegRetriever.getEmbeddedPicture()
+        val rawBitmap: Bitmap = try {
+            MediaMetadataRetriever().use { nativeRetriever ->
+                nativeRetriever.setDataSource(source)
+
+                val embeddedPicture = nativeRetriever.embeddedPicture
                 val embeddedPictureBitmap = embeddedPicture?.let { pictureBytes ->
-                    BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size)
+                    val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, boundsOpts)
+                    val sampleSize = DecodeUtils.calculateInSampleSize(
+                        srcWidth = boundsOpts.outWidth,
+                        srcHeight = boundsOpts.outHeight,
+                        dstWidth = targetWidth,
+                        dstHeight = targetHeight,
+                        scale = options.scale,
+                    )
+                    val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                    BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, decodeOpts)
                 }
 
-                if (embeddedPictureBitmap != null) return@use embeddedPictureBitmap
+                if (embeddedPictureBitmap != null) {
+                    embeddedPictureBitmap
+                } else {
+                    val videoDuration = nativeRetriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                        ?.toLongOrNull() ?: 0L
 
-                val videoDuration = nativeRetriever
-                    .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                    ?.toLongOrNull() ?: 0L
-
-                return@use when (strategy) {
-                    is ThumbnailStrategy.FirstFrame -> {
-                        nativeRetriever.getFrameAtTime(0) ?: ffmpegRetriever.getFrameAtTime(0)
+                    val targetTimeUs = when (strategy) {
+                        is ThumbnailStrategy.FirstFrame -> 0L
+                        is ThumbnailStrategy.FrameAtPercentage -> (videoDuration * strategy.percentage * 1000).toLong()
+                        is ThumbnailStrategy.Hybrid -> (videoDuration * strategy.percentage * 1000).toLong().takeIf { it > 0 } ?: 0L
                     }
 
-                    is ThumbnailStrategy.FrameAtPercentage -> {
-                        val timeUs = (videoDuration * strategy.percentage * 1000).toLong()
-                        nativeRetriever.getFrameAtTime(timeUs) ?: ffmpegRetriever.getFrameAtTime(timeUs)
-                    }
-
-                    is ThumbnailStrategy.Hybrid -> {
-                        val firstFrame = nativeRetriever.getFrameAtTime(0)
-                        if (firstFrame == null || isSolidColor(firstFrame)) {
-                            val timeUs = (videoDuration * strategy.percentage * 1000).toLong()
-                            nativeRetriever.getFrameAtTime(timeUs) ?: ffmpegRetriever.getFrameAtTime(timeUs)
-                        } else {
-                            firstFrame
-                        }
-                    }
-                } ?: throw IllegalStateException("Failed to get video thumbnail.")
+                    if (SDK_INT >= 27) {
+                        nativeRetriever.getScaledFrameAtTime(
+                            targetTimeUs,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                            targetWidth,
+                            targetHeight,
+                        ) ?: nativeRetriever.getFrameAtTime(targetTimeUs)
+                    } else {
+                        nativeRetriever.getFrameAtTime(targetTimeUs)
+                    } ?: throw IllegalStateException("Native frame extraction returned null")
+                }
             }
+        } catch (_: Exception) {
+            // Fallback to FFmpeg retriever only when native decoder fails
+            MediaThumbnailRetriever().use { ffmpegRetriever ->
+                ffmpegRetriever.setDataSource(source)
+                val embedded = ffmpegRetriever.getEmbeddedPicture()
+                if (embedded != null) {
+                    BitmapFactory.decodeByteArray(embedded, 0, embedded.size)
+                } else {
+                    ffmpegRetriever.getFrameAtTime(0)
+                }
+            } ?: throw IllegalStateException("Failed to get video thumbnail.")
         }
 
         val srcWidth = rawBitmap.width

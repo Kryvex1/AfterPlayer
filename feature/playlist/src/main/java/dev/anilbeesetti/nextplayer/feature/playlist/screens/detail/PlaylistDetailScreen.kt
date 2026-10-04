@@ -114,7 +114,7 @@ internal fun PlaylistDetailScreenContent(
         ?.toUri()
         ?: videoUris.firstOrNull()
     val isReordering = state.isReordering &&
-        playlist?.type == PlaylistType.LOCAL &&
+        (playlist?.type == PlaylistType.LOCAL || playlist?.type == PlaylistType.URL) &&
         !isTv
     val searchFocusRequester = remember { FocusRequester() }
     val contentFocusRequester = rememberTvListFocusRequester()
@@ -214,7 +214,7 @@ internal fun PlaylistDetailScreenContent(
                                 )
                             }
                         } else {
-                            if (playlist?.type != null && playlist.type != PlaylistType.LOCAL) {
+                            if (playlist?.type == PlaylistType.M3U_URL || playlist?.type == PlaylistType.M3U_FILE) {
                                 if (state.isRefreshing) {
                                     CircularProgressIndicator(
                                         modifier = Modifier
@@ -236,6 +236,20 @@ internal fun PlaylistDetailScreenContent(
                                     }
                                 }
                             }
+                            if (playlist?.type == PlaylistType.URL) {
+                                IconButton(
+                                    onClick = {
+                                        onAction(PlaylistDetailUiAction.ShowAddUrlDialog)
+                                    },
+                                    enabled = !state.updateActionState.isRunning,
+                                    modifier = Modifier.tvFocusRing(),
+                                ) {
+                                    Icon(
+                                        imageVector = NextIcons.Add,
+                                        contentDescription = stringResource(R.string.add_stream_url),
+                                    )
+                                }
+                            }
                             IconButton(
                                 onClick = {
                                     onAction(PlaylistDetailUiAction.OnSearchClick)
@@ -248,7 +262,7 @@ internal fun PlaylistDetailScreenContent(
                                     contentDescription = stringResource(R.string.search),
                                 )
                             }
-                            if (!isTv && playlist?.type == PlaylistType.LOCAL) {
+                            if (!isTv && (playlist?.type == PlaylistType.LOCAL || playlist?.type == PlaylistType.URL)) {
                                 IconButton(
                                     onClick = {
                                         onAction(PlaylistDetailUiAction.OnReorderClick)
@@ -324,7 +338,7 @@ internal fun PlaylistDetailScreenContent(
                             modifier = modifier,
                         )
                     }
-                    if (playlist.type == PlaylistType.LOCAL) {
+                    if (playlist.type == PlaylistType.LOCAL || playlist.type == PlaylistType.URL) {
                         content(containerModifier)
                     } else {
                         PullToRefreshBox(
@@ -348,6 +362,17 @@ internal fun PlaylistDetailScreenContent(
             },
             onDismissRequest = {
                 onAction(PlaylistDetailUiAction.DismissRemoveDialog)
+            },
+        )
+    }
+
+    if (state.showAddUrlDialog) {
+        AddPlaylistUrlDialog(
+            isSaving = state.updateActionState.isRunning,
+            error = state.updateActionState.errorMessage,
+            onDismissRequest = { onAction(PlaylistDetailUiAction.DismissAddUrlDialog) },
+            onConfirm = { url, title ->
+                onAction(PlaylistDetailUiAction.AddUrlItem(url = url, title = title))
             },
         )
     }
@@ -394,7 +419,7 @@ private fun PlaylistDetailContent(
     }
 
     Column(modifier = modifier) {
-        if (playlist.type != PlaylistType.LOCAL) {
+        if (playlist.type == PlaylistType.M3U_URL || playlist.type == PlaylistType.M3U_FILE) {
             playlist.lastRefreshedAt?.let { refreshedAt ->
                 Text(
                     text = stringResource(
@@ -495,7 +520,7 @@ private fun PlaylistDetailContent(
                                 isLastItem = index == visibleItems.lastIndex,
                                 isTv = isTv,
                                 isReordering = isReordering,
-                                isEditable = playlist.type == PlaylistType.LOCAL,
+                                isEditable = playlist.type == PlaylistType.LOCAL || playlist.type == PlaylistType.URL,
                                 actionsEnabled = actionsEnabled,
                                 onClick = onPlay,
                                 onRemove = {
@@ -730,4 +755,74 @@ private fun PlaylistUnavailable(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun AddPlaylistUrlDialog(
+    isSaving: Boolean,
+    error: String?,
+    onDismissRequest: () -> Unit,
+    onConfirm: (url: String, title: String) -> Unit,
+) {
+    var title by rememberSaveable { mutableStateOf("") }
+    var url by rememberSaveable { mutableStateOf("") }
+    val trimmedUrl = url.trim()
+    val isValid = remember(trimmedUrl) { trimmedUrl.isNotBlank() }
+
+    NextDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.add_stream_url)) },
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NextOutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.url_title)) },
+                    placeholder = { Text(stringResource(R.string.enter_title_hint)) },
+                    enabled = !isSaving,
+                    singleLine = true,
+                )
+                NextOutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.stream_url)) },
+                    placeholder = { Text(stringResource(R.string.enter_url_hint)) },
+                    enabled = !isSaving,
+                    singleLine = true,
+                    isError = error != null,
+                    supportingText = {
+                        if (error != null) {
+                            Text(error)
+                        } else if (trimmedUrl.isEmpty()) {
+                            Text(stringResource(R.string.url_required))
+                        }
+                    },
+                )
+                if (isSaving) {
+                    Text(
+                        text = stringResource(R.string.saving_playlist),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (isValid) onConfirm(trimmedUrl, title.trim()) },
+                enabled = !isSaving && isValid,
+                modifier = Modifier.tvFocusRing(),
+            ) {
+                Text(stringResource(R.string.add))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                enabled = !isSaving,
+                modifier = Modifier.tvFocusRing(),
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

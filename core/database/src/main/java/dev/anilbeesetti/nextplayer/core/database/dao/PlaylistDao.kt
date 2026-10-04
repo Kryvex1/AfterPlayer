@@ -132,10 +132,34 @@ interface PlaylistDao {
         updateLastRefreshedAt(playlistId, refreshedAt)
     }
 
-    suspend fun requireLocalPlaylist(playlistId: Long) {
-        require(getPlaylistEntity(playlistId)?.type == LOCAL_PLAYLIST_TYPE) {
-            "Only local playlists can be edited"
+    @Transaction
+    suspend fun createUrlPlaylist(name: String, uri: String, title: String?): Long {
+        val playlistId = insertPlaylist(PlaylistEntity(name = name, type = URL_PLAYLIST_TYPE))
+        if (uri.isNotBlank()) {
+            addUrlItem(playlistId, uri, title)
         }
+        return playlistId
+    }
+
+    suspend fun requireLocalPlaylist(playlistId: Long) {
+        val type = getPlaylistEntity(playlistId)?.type
+        require(type in EDITABLE_PLAYLIST_TYPES) {
+            "Only local and URL playlists can be edited"
+        }
+    }
+
+    @Transaction
+    suspend fun addUrlItem(playlistId: Long, uri: String, title: String?): Boolean {
+        val currentItems = getItems(playlistId)
+        if (currentItems.any { it.uri == uri }) return false
+        val nextPosition = currentItems.size
+        val item = PlaylistItemEntity(
+            playlistId = playlistId,
+            uri = uri,
+            position = nextPosition,
+            title = title?.takeIf { it.isNotBlank() },
+        )
+        return insertItems(listOf(item)).isNotEmpty()
     }
 
     @Transaction
@@ -194,7 +218,9 @@ interface PlaylistDao {
     suspend fun removeMissingLocalItems(existingUris: Set<String>) {
         val localPlaylistIds = getLocalPlaylistIds().toSet()
         val missingItems = getAllItems().filter {
-            it.playlistId in localPlaylistIds && it.uri !in existingUris
+            it.playlistId in localPlaylistIds &&
+                !isNetworkStreamUri(it.uri) &&
+                it.uri !in existingUris
         }
         if (missingItems.isEmpty()) return
 
@@ -202,6 +228,21 @@ interface PlaylistDao {
         missingItems.map { it.playlistId }.distinct().forEach { playlistId ->
             normalizePositions(playlistId)
         }
+    }
+
+    private fun isNetworkStreamUri(uri: String): Boolean {
+        val lower = uri.lowercase()
+        return lower.startsWith("http://") ||
+            lower.startsWith("https://") ||
+            lower.startsWith("rtsp://") ||
+            lower.startsWith("rtmp://") ||
+            lower.startsWith("mms://") ||
+            lower.startsWith("udp://") ||
+            lower.startsWith("smb://") ||
+            lower.startsWith("ftp://") ||
+            lower.startsWith("sftp://") ||
+            lower.startsWith("webdav://") ||
+            lower.startsWith("webdavs://")
     }
 
     private suspend fun normalizePositions(playlistId: Long) {
@@ -217,6 +258,8 @@ interface PlaylistDao {
 
     companion object {
         private const val LOCAL_PLAYLIST_TYPE = "LOCAL"
+        private const val URL_PLAYLIST_TYPE = "URL"
+        private val EDITABLE_PLAYLIST_TYPES = setOf("LOCAL", "URL")
         private val LINKED_PLAYLIST_TYPES = setOf("M3U_URL", "M3U_FILE")
     }
 }

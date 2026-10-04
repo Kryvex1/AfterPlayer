@@ -63,6 +63,9 @@ class FakeMediaRepository : MediaRepository {
     override suspend fun clearPlaybackHistory() {
     }
 
+    override suspend fun removeVideosFromPlaybackHistory(uris: List<String>) {
+    }
+
     override suspend fun updateMediumLastPlayedTime(uri: String, lastPlayedTime: Long, duration: Long?) {
     }
 

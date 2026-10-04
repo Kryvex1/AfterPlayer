@@ -27,6 +27,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Factory
@@ -41,7 +42,7 @@ class LocalMediaRepository(
     override fun observeFolders(folderPath: String?): Flow<List<Folder>> {
         return mediaService.observeFolders(folderPath).map { mediaFolders ->
             mediaFolders.map { it.toFolder() }
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     override fun observeVideos(folderPath: String?): Flow<List<Video>> {
@@ -51,15 +52,15 @@ class LocalMediaRepository(
                 val mediaState = statesMap[mediaVideo.uri.toString()]
                 mediaVideo.toVideo(mediaState)
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
-    override suspend fun fetchFolders(folderPath: String?): List<Folder> {
-        return mediaService.fetchFolders(folderPath).map { it.toFolder() }
+    override suspend fun fetchFolders(folderPath: String?): List<Folder> = withContext(Dispatchers.IO) {
+        mediaService.fetchFolders(folderPath).map { it.toFolder() }
     }
 
-    override suspend fun fetchVideos(folderPath: String?): List<Video> {
-        return mediaService.fetchVideos(folderPath).mapAsync { mediaVideo ->
+    override suspend fun fetchVideos(folderPath: String?): List<Video> = withContext(Dispatchers.IO) {
+        mediaService.fetchVideos(folderPath).mapAsync { mediaVideo ->
             val mediaState = mediumStateDao.get(mediaVideo.uri.toString())
             mediaVideo.toVideo(mediaState)
         }
@@ -74,7 +75,7 @@ class LocalMediaRepository(
                 .map { state ->
                     videosByUri[state.uriString]?.toVideo(state) ?: state.toHistoryVideo()
                 }
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     override fun observeTrashVideos(): Flow<List<Video>> {
@@ -110,6 +111,10 @@ class LocalMediaRepository(
 
     override suspend fun clearPlaybackHistory() {
         mediumStateDao.clearPlaybackHistory()
+    }
+
+    override suspend fun removeVideosFromPlaybackHistory(uris: List<String>) {
+        mediumStateDao.removeVideosFromPlaybackHistory(uris)
     }
 
     override suspend fun updateMediumLastPlayedTime(uri: String, lastPlayedTime: Long, duration: Long?) {

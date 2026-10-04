@@ -38,7 +38,14 @@ class HistoryViewModel(
                     stateInternal.update { it.copy(history = DataState.Error(error)) }
                 }
                 .collect { history ->
-                    stateInternal.update { it.copy(history = DataState.Success(history)) }
+                    stateInternal.update { currentState ->
+                        val validSelected = currentState.selectedUris.intersect(history.map { it.uriString }.toSet())
+                        currentState.copy(
+                            history = DataState.Success(history),
+                            selectedUris = validSelected,
+                            isSelectionMode = currentState.isSelectionMode && validSelected.isNotEmpty(),
+                        )
+                    }
                 }
         }
         viewModelScope.launch {
@@ -50,26 +57,97 @@ class HistoryViewModel(
 
     override fun onAction(action: HistoryAction) {
         when (action) {
-            is HistoryAction.NavigateUp -> output.navigateUp()
+            is HistoryAction.NavigateUp -> {
+                if (state.value.isSelectionMode) {
+                    stateInternal.update { it.copy(isSelectionMode = false, selectedUris = emptySet()) }
+                } else {
+                    output.navigateUp()
+                }
+            }
             is HistoryAction.PlayVideo -> output.playVideo(action.uri)
-
             is HistoryAction.ClearHistory -> clearHistory()
+            is HistoryAction.ToggleSelection -> toggleSelection(action.uri)
+            is HistoryAction.SelectAll -> selectAll()
+            is HistoryAction.ClearSelection -> clearSelection()
+            is HistoryAction.DeleteSelected -> deleteSelected()
+            is HistoryAction.DeleteSingle -> deleteSingle(action.uri)
+        }
+    }
+
+    private fun toggleSelection(uri: String) {
+        stateInternal.update { currentState ->
+            val updated = if (currentState.selectedUris.contains(uri)) {
+                currentState.selectedUris - uri
+            } else {
+                currentState.selectedUris + uri
+            }
+            currentState.copy(
+                selectedUris = updated,
+                isSelectionMode = updated.isNotEmpty(),
+            )
+        }
+    }
+
+    private fun selectAll() {
+        val currentList = (state.value.history as? DataState.Success)?.value.orEmpty()
+        val allUris = currentList.map { it.uriString }.toSet()
+        stateInternal.update { currentState ->
+            if (currentState.selectedUris.size == allUris.size) {
+                currentState.copy(selectedUris = emptySet(), isSelectionMode = false)
+            } else {
+                currentState.copy(selectedUris = allUris, isSelectionMode = allUris.isNotEmpty())
+            }
+        }
+    }
+
+    private fun clearSelection() {
+        stateInternal.update { it.copy(selectedUris = emptySet(), isSelectionMode = false) }
+    }
+
+    private fun deleteSelected() {
+        val urisToDelete = state.value.selectedUris.toList()
+        if (urisToDelete.isEmpty()) return
+        viewModelScope.launch {
+            mediaRepository.removeVideosFromPlaybackHistory(urisToDelete)
+            stateInternal.update { it.copy(selectedUris = emptySet(), isSelectionMode = false) }
+        }
+    }
+
+    private fun deleteSingle(uri: String) {
+        viewModelScope.launch {
+            mediaRepository.removeVideosFromPlaybackHistory(listOf(uri))
+            stateInternal.update { currentState ->
+                val updated = currentState.selectedUris - uri
+                currentState.copy(
+                    selectedUris = updated,
+                    isSelectionMode = currentState.isSelectionMode && updated.isNotEmpty(),
+                )
+            }
         }
     }
 
     private fun clearHistory() {
-        viewModelScope.launch { mediaRepository.clearPlaybackHistory() }
+        viewModelScope.launch {
+            mediaRepository.clearPlaybackHistory()
+            stateInternal.update { it.copy(selectedUris = emptySet(), isSelectionMode = false) }
+        }
     }
 }
 
 data class HistoryUiState(
     val history: DataState<List<Video>> = DataState.Loading,
     val preferences: ApplicationPreferences = ApplicationPreferences(),
+    val selectedUris: Set<String> = emptySet(),
+    val isSelectionMode: Boolean = false,
 )
 
 sealed interface HistoryAction {
     data object NavigateUp : HistoryAction
     data class PlayVideo(val uri: String) : HistoryAction
-
     data object ClearHistory : HistoryAction
+    data class ToggleSelection(val uri: String) : HistoryAction
+    data object SelectAll : HistoryAction
+    data object ClearSelection : HistoryAction
+    data object DeleteSelected : HistoryAction
+    data class DeleteSingle(val uri: String) : HistoryAction
 }

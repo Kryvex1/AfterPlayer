@@ -1,5 +1,6 @@
 package dev.anilbeesetti.nextplayer.feature.more.screens.history
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -53,32 +55,75 @@ internal fun HistoryScreenContent(
     onAction: (HistoryAction) -> Unit,
 ) {
     var showClearConfirmation by remember { mutableStateOf(false) }
+    var showDeleteSelectedConfirmation by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = state.isSelectionMode) {
+        onAction(HistoryAction.ClearSelection)
+    }
 
     Scaffold(
         topBar = {
-            NextTopAppBar(
-                title = stringResource(R.string.history),
-                navigationIcon = {
-                    FilledTonalIconButton(
-                        onClick = { onAction(HistoryAction.NavigateUp) },
-                        modifier = Modifier.tvFocusRing(),
-                    ) {
-                        Icon(
-                            imageVector = NextIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.navigate_up),
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(
-                        enabled = state.history.result.orEmpty().isNotEmpty(),
-                        onClick = { showClearConfirmation = true },
-                        modifier = Modifier.tvFocusRing(),
-                    ) {
-                        Text(stringResource(R.string.clear_all))
-                    }
-                },
-            )
+            if (state.isSelectionMode) {
+                NextTopAppBar(
+                    title = stringResource(R.string.items_selected, state.selectedUris.size),
+                    navigationIcon = {
+                        FilledTonalIconButton(
+                            onClick = { onAction(HistoryAction.ClearSelection) },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.Close,
+                                contentDescription = stringResource(R.string.close),
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = { onAction(HistoryAction.SelectAll) },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.SelectAll,
+                                contentDescription = stringResource(R.string.select_all),
+                            )
+                        }
+                        IconButton(
+                            onClick = { showDeleteSelectedConfirmation = true },
+                            enabled = state.selectedUris.isNotEmpty(),
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.Delete,
+                                contentDescription = stringResource(R.string.delete_selected),
+                            )
+                        }
+                    },
+                )
+            } else {
+                NextTopAppBar(
+                    title = stringResource(R.string.history),
+                    navigationIcon = {
+                        FilledTonalIconButton(
+                            onClick = { onAction(HistoryAction.NavigateUp) },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.ArrowBack,
+                                contentDescription = stringResource(R.string.navigate_up),
+                            )
+                        }
+                    },
+                    actions = {
+                        TextButton(
+                            enabled = state.history.result.orEmpty().isNotEmpty(),
+                            onClick = { showClearConfirmation = true },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Text(stringResource(R.string.clear_all))
+                        }
+                    },
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) { scaffoldPadding ->
@@ -101,18 +146,54 @@ internal fun HistoryScreenContent(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     itemsIndexed(history.value, key = { _, video -> video.uriString }) { index, video ->
+                        val isSelected = state.selectedUris.contains(video.uriString)
                         VideoListItem(
                             video = video,
                             isRecentlyPlayedVideo = false,
                             preferences = state.preferences,
                             isFirstItem = index == 0,
                             isLastItem = index == history.value.lastIndex,
-                            onClick = { onAction(HistoryAction.PlayVideo(video.uriString)) },
+                            selected = isSelected,
+                            onClick = {
+                                if (state.isSelectionMode) {
+                                    onAction(HistoryAction.ToggleSelection(video.uriString))
+                                } else {
+                                    onAction(HistoryAction.PlayVideo(video.uriString))
+                                }
+                            },
+                            onLongClick = {
+                                onAction(HistoryAction.ToggleSelection(video.uriString))
+                            },
                         )
                     }
                 }
             }
         }
+    }
+
+    if (showDeleteSelectedConfirmation) {
+        NextDialog(
+            onDismissRequest = { showDeleteSelectedConfirmation = false },
+            title = { Text(stringResource(R.string.delete_selected)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onAction(HistoryAction.DeleteSelected)
+                        showDeleteSelectedConfirmation = false
+                    },
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSelectedConfirmation = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            content = {
+                Text(stringResource(R.string.delete_selected_confirmation, state.selectedUris.size))
+            },
+        )
     }
 
     if (showClearConfirmation) {

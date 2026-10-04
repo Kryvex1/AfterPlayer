@@ -57,7 +57,7 @@ class PlaylistDetailViewModel(
                     currentState.copy(
                         playlistDataState = DataState.Success(playlist),
                         isReordering = currentState.isReordering &&
-                            playlist?.type == PlaylistType.LOCAL &&
+                            (playlist?.type == PlaylistType.LOCAL || playlist?.type == PlaylistType.URL) &&
                             playlist.items.size > 1,
                     )
                 }
@@ -78,7 +78,8 @@ class PlaylistDetailViewModel(
                 it.copy(isSearching = false, searchQuery = "")
             }
             is PlaylistDetailUiAction.OnReorderClick -> {
-                if (currentPlaylist()?.type == PlaylistType.LOCAL) {
+                val type = currentPlaylist()?.type
+                if (type == PlaylistType.LOCAL || type == PlaylistType.URL) {
                     stateInternal.update {
                         it.copy(isReordering = true, isSearching = false, searchQuery = "")
                     }
@@ -95,9 +96,33 @@ class PlaylistDetailViewModel(
             is PlaylistDetailUiAction.DismissRemoveDialog -> stateInternal.update {
                 it.copy(showRemoveDialogFor = null)
             }
+            is PlaylistDetailUiAction.ShowAddUrlDialog -> stateInternal.update {
+                it.copy(showAddUrlDialog = true)
+            }
+            is PlaylistDetailUiAction.DismissAddUrlDialog -> stateInternal.update {
+                it.copy(showAddUrlDialog = false)
+            }
+            is PlaylistDetailUiAction.AddUrlItem -> addUrlItem(action.url, action.title)
             is PlaylistDetailUiAction.RemoveVideo -> removeVideo(action.videoUri)
             is PlaylistDetailUiAction.ReplaceOrder -> replaceOrder(action.orderedUris)
         }
+    }
+
+    private fun addUrlItem(url: String, title: String) {
+        val trimmedUrl = url.trim()
+        val trimmedTitle = title.trim()
+        if (trimmedUrl.isBlank()) return
+        updatePlaylist(
+            block = {
+                val added = playlistRepository.addUrlItem(input.playlistId, trimmedUrl, trimmedTitle.ifBlank { null })
+                if (!added) {
+                    showToast(systemService.getString(R.string.playlist_update_failed))
+                }
+            },
+            onSuccess = {
+                stateInternal.update { it.copy(showAddUrlDialog = false) }
+            },
+        )
     }
 
     private fun play(startUri: Uri) {
@@ -107,7 +132,7 @@ class PlaylistDetailViewModel(
 
     private fun refreshM3U() {
         val playlist = currentPlaylist() ?: return
-        if (playlist.type == PlaylistType.LOCAL || refreshJob?.isActive == true) return
+        if (playlist.type == PlaylistType.LOCAL || playlist.type == PlaylistType.URL || refreshJob?.isActive == true) return
         refreshJob = viewModelScope.launch {
             stateInternal.update { it.copy(isRefreshing = true) }
             try {
@@ -133,8 +158,8 @@ class PlaylistDetailViewModel(
         return when (playlist.type) {
             PlaylistType.M3U_URL -> m3uParser.parseUrl(source)
             PlaylistType.M3U_FILE -> m3uParser.parseUri(source.toUri())
-            PlaylistType.LOCAL -> Result.failure(
-                IllegalStateException("Local playlists do not have a linked source"),
+            PlaylistType.LOCAL, PlaylistType.URL -> Result.failure(
+                IllegalStateException("Local and URL playlists do not have a linked source"),
             )
         }
     }
@@ -208,6 +233,7 @@ data class PlaylistDetailUiState(
     val searchQuery: String = "",
     val isReordering: Boolean = false,
     val showRemoveDialogFor: PlaylistItem? = null,
+    val showAddUrlDialog: Boolean = false,
 )
 
 sealed interface PlaylistDetailUiAction {
@@ -219,6 +245,9 @@ sealed interface PlaylistDetailUiAction {
     data object OnFinishReorderingClick : PlaylistDetailUiAction
     data class OnPlay(val startUri: Uri) : PlaylistDetailUiAction
     data object Refresh : PlaylistDetailUiAction
+    data object ShowAddUrlDialog : PlaylistDetailUiAction
+    data object DismissAddUrlDialog : PlaylistDetailUiAction
+    data class AddUrlItem(val url: String, val title: String) : PlaylistDetailUiAction
     data class ShowRemoveDialogFor(val item: PlaylistItem) : PlaylistDetailUiAction
     data object DismissRemoveDialog : PlaylistDetailUiAction
     data class RemoveVideo(val videoUri: String) : PlaylistDetailUiAction

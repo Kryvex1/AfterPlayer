@@ -1,7 +1,8 @@
 package dev.anilbeesetti.nextplayer.settings.screens.about
 
-import android.content.ClipData
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -36,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,11 +46,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -66,12 +62,9 @@ import dev.anilbeesetti.nextplayer.core.ui.components.rememberTvListFocusRequest
 import dev.anilbeesetti.nextplayer.core.ui.components.tvFocusDown
 import dev.anilbeesetti.nextplayer.core.ui.components.tvListFocus
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
-import kotlinx.coroutines.launch
 
-private const val GITHUB_URL = "https://github.com/anilbeesetti/nextplayer"
-private const val KOFI_URL = "https://ko-fi.com/anilbeesetti"
-private const val PAYPAL_URL = "https://paypal.me/AnilBeesetti"
-private const val UPI_ID = "anilbeesetti10@oksbi"
+private const val TELEGRAM_USER = "UmangSattawan"
+private const val TELEGRAM_CHANNEL = "AfterPlayer"
 
 @Composable
 fun AboutPreferencesScreen(viewModel: AboutPreferencesViewModel) {
@@ -86,17 +79,17 @@ private fun AboutPreferencesScreenContent(
     onAction: (AboutPreferencesAction) -> Unit,
 ) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-
     val listFocusRequester = rememberTvListFocusRequester()
+
     Scaffold(
         topBar = {
             NextTopAppBar(
                 title = stringResource(id = R.string.about_name),
                 navigationIcon = {
-                    FilledTonalIconButton(onClick = { onAction(AboutPreferencesAction.NavigateUp) }, modifier = Modifier.tvFocusDown(listFocusRequester)) {
+                    FilledTonalIconButton(
+                        onClick = { onAction(AboutPreferencesAction.NavigateUp) },
+                        modifier = Modifier.tvFocusDown(listFocusRequester),
+                    ) {
                         Icon(
                             imageVector = NextIcons.ArrowBack,
                             contentDescription = stringResource(id = R.string.navigate_up),
@@ -118,51 +111,29 @@ private fun AboutPreferencesScreenContent(
         ) {
             AboutApp(
                 appVersion = state.appVersion,
-                onGithubClick = {
-                    uriHandler.openUriOrShowToast(
-                        uri = GITHUB_URL,
-                        context = context,
-                    )
-                },
-                onLibrariesClick = { onAction(AboutPreferencesAction.OpenLibraries) },
+                onTelegramUserClick = { openTelegram(context, TELEGRAM_USER) },
+                onTelegramChannelClick = { openTelegram(context, TELEGRAM_CHANNEL) },
             )
-            ListSectionTitle(text = stringResource(id = R.string.donate))
+
+            Spacer(Modifier.height(16.dp))
+
+            ListSectionTitle(text = stringResource(id = R.string.community))
+
             Column(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
                 ClickablePreferenceItem(
-                    title = stringResource(R.string.kofi),
-                    description = stringResource(R.string.support_the_developer_on, stringResource(R.string.kofi)),
-                    icon = ImageVector.vectorResource(R.drawable.ic_kofi),
-                    onClick = {
-                        uriHandler.openUriOrShowToast(
-                            uri = KOFI_URL,
-                            context = context,
-                        )
-                    },
+                    title = stringResource(R.string.telegram_channel),
+                    description = stringResource(R.string.telegram_channel_desc),
+                    icon = ImageVector.vectorResource(R.drawable.ic_telegram),
+                    onClick = { openTelegram(context, TELEGRAM_CHANNEL) },
                     isFirstItem = true,
                 )
                 ClickablePreferenceItem(
-                    title = stringResource(R.string.paypal),
-                    description = stringResource(R.string.support_the_developer_on, stringResource(R.string.paypal)),
-                    icon = ImageVector.vectorResource(R.drawable.ic_paypal),
-                    onClick = {
-                        uriHandler.openUriOrShowToast(
-                            uri = PAYPAL_URL,
-                            context = context,
-                        )
-                    },
-                )
-                ClickablePreferenceItem(
-                    title = stringResource(R.string.upi),
-                    description = UPI_ID,
-                    icon = ImageVector.vectorResource(R.drawable.ic_upi),
-                    onClick = {
-                        scope.launch {
-                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("text", UPI_ID)))
-                            Toast.makeText(context, "copied to clipboard", Toast.LENGTH_SHORT).show()
-                        }
-                    },
+                    title = stringResource(R.string.contact_developer),
+                    description = "@$TELEGRAM_USER",
+                    icon = ImageVector.vectorResource(R.drawable.ic_telegram),
+                    onClick = { openTelegram(context, TELEGRAM_USER) },
                     isLastItem = true,
                 )
             }
@@ -174,8 +145,8 @@ private fun AboutPreferencesScreenContent(
 fun AboutApp(
     appVersion: String,
     modifier: Modifier = Modifier,
-    onGithubClick: () -> Unit,
-    onLibrariesClick: () -> Unit,
+    onTelegramUserClick: () -> Unit,
+    onTelegramChannelClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val appIcon = remember { context.appIcon()?.asImageBitmap() }
@@ -196,10 +167,7 @@ fun AboutApp(
 
     Column(
         modifier = modifier
-            .padding(
-                vertical = 16.dp,
-                horizontal = 8.dp,
-            )
+            .padding(vertical = 16.dp, horizontal = 8.dp)
             .drawWithCache {
                 val cx = size.width - size.width * fraction
                 val cy = size.height * fraction
@@ -213,10 +181,7 @@ fun AboutApp(
                 onDrawBehind {
                     drawRoundRect(
                         brush = gradient,
-                        cornerRadius = CornerRadius(
-                            cornerRadius.toPx(),
-                            cornerRadius.toPx(),
-                        ),
+                        cornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx()),
                     )
                 }
             }
@@ -229,13 +194,13 @@ fun AboutApp(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            appIcon?.let {
-                Image(
-                    bitmap = it,
-                    contentDescription = "App Logo",
-                    modifier = Modifier.size(48.dp).clip(CircleShape),
-                )
-            }
+            Image(
+                painter = painterResource(R.drawable.app_logo),
+                contentDescription = "App Logo",
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape),
+            )
             Column {
                 Text(
                     text = stringResource(id = R.string.app_name),
@@ -267,51 +232,108 @@ fun AboutApp(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Button(
-                onClick = onLibrariesClick,
+                onClick = onTelegramChannelClick,
                 colors = ButtonDefaults.buttonColors(
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = .12f),
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                    disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = .12f),
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(54.dp)
                     .weight(1f),
             ) {
-                Text(text = stringResource(R.string.libraries))
+                Icon(
+                    painter = painterResource(R.drawable.ic_telegram),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = "Join Channel",
+                        fontSize = 13.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        lineHeight = 15.sp,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = "@AfterPlayer",
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                    )
+                }
             }
             Button(
-                onClick = onGithubClick,
+                onClick = onTelegramUserClick,
                 colors = ButtonDefaults.buttonColors(
                     contentColor = MaterialTheme.colorScheme.onTertiary,
-                    disabledContentColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = .12f),
-                    containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f),
-                    disabledContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = .12f),
+                    containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .height(52.dp),
+                    .height(54.dp),
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_github),
+                    painter = painterResource(R.drawable.ic_telegram),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.github))
+                Spacer(modifier = Modifier.width(6.dp))
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = "Umang",
+                        fontSize = 13.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        lineHeight = 15.sp,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = "Sattawan",
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f),
+                    )
+                }
             }
         }
     }
 }
 
-internal fun UriHandler.openUriOrShowToast(uri: String, context: Context) {
+private fun openTelegram(context: Context, target: String) {
+    val cleanName = target.removePrefix("@").removePrefix("https://t.me/").trim()
+    val tgIntent = Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=$cleanName")).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/$cleanName")).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+    try {
+        tgIntent.`package` = "org.telegram.messenger"
+        context.startActivity(tgIntent)
+    } catch (_: Exception) {
+        try {
+            tgIntent.`package` = null
+            context.startActivity(tgIntent)
+        } catch (_: Exception) {
+            try {
+                context.startActivity(webIntent)
+            } catch (_: Exception) {
+                Toast.makeText(context, context.getString(R.string.error_opening_link), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+internal fun androidx.compose.ui.platform.UriHandler.openUriOrShowToast(uri: String, context: Context) {
     try {
         openUri(uri = uri)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, context.getString(R.string.error_opening_link), Toast.LENGTH_SHORT).show()
     }
 }

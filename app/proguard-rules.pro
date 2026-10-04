@@ -1,53 +1,127 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# -------------------------------------------------------------
+# Android & Core Optimization
+# -------------------------------------------------------------
+-dontobfuscate
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# General Attributes
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+-keepattributes Exceptions,Deprecated,Synthetic
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep all native JNI methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# -------------------------------------------------------------
+# Media3 & ExoPlayer
+# -------------------------------------------------------------
+-keep class androidx.media3.** { *; }
+-keep interface androidx.media3.** { *; }
+-dontwarn androidx.media3.**
 
+# -------------------------------------------------------------
+# NextLib FFmpeg & MediaInfo JNI Decoders
+# -------------------------------------------------------------
+-keep class io.github.anilbeesetti.nextlib.** { *; }
+-keep interface io.github.anilbeesetti.nextlib.** { *; }
+-dontwarn io.github.anilbeesetti.nextlib.**
+
+# -------------------------------------------------------------
+# Kotlin Coroutines & Reflection
+# -------------------------------------------------------------
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keepclassmembernames class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+-dontwarn kotlinx.coroutines.**
+
+# -------------------------------------------------------------
+# KotlinX Serialization
+# -------------------------------------------------------------
+-dontnote kotlinx.serialization.**
+-keepclassmembers class * {
+    *** Companion;
+}
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep class kotlinx.serialization.** { *; }
+-dontwarn kotlinx.serialization.**
+
+# -------------------------------------------------------------
+# Koin Dependency Injection
+# -------------------------------------------------------------
+-keep class org.koin.** { *; }
+-keep interface org.koin.** { *; }
+-dontwarn org.koin.**
+
+# -------------------------------------------------------------
+# Coil 3 Image Loading & Custom Decoders
+# -------------------------------------------------------------
+-keep class coil3.** { *; }
+-dontwarn coil3.**
+-keep class dev.anilbeesetti.nextplayer.** { *; }
+
+# -------------------------------------------------------------
+# Jetpack Room & SQLite
+# -------------------------------------------------------------
+-keep class * extends androidx.room.RoomDatabase
+-dontwarn androidx.room.**
+-dontwarn androidx.sqlite.**
+
+# -------------------------------------------------------------
+# AboutLibraries
+# -------------------------------------------------------------
+-keep class com.mikepenz.aboutlibraries.** { *; }
+-dontwarn com.mikepenz.aboutlibraries.**
+
+# -------------------------------------------------------------
+# Reorderable
+# -------------------------------------------------------------
+-keep class sh.calvin.reorderable.** { *; }
+-dontwarn sh.calvin.reorderable.**
+
+# -------------------------------------------------------------
+# Universal Chardet
+# -------------------------------------------------------------
+-keep class org.mozilla.universalchardet.** { *; }
+-dontwarn org.mozilla.universalchardet.**
+
+# -------------------------------------------------------------
+# SMBJ & Network Providers (SMB, SFTP, WebDAV, FTP)
+# -------------------------------------------------------------
 -dontwarn org.xmlpull.v1.**
 -dontnote org.xmlpull.v1.**
 
-# SMBJ ProGuard Rules
-# Keep SMBJ classes
--keep class com.hierynomus.smbj.** { *; }
--keep class com.hierynomus.mssmb2.** { *; }
--keep class com.hierynomus.msdtyp.** { *; }
--keep class com.hierynomus.msfscc.** { *; }
--keep class com.hierynomus.protocol.** { *; }
--keep class com.hierynomus.spnego.** { *; }
--keep class com.hierynomus.ntlm.** { *; }
--keep class com.hierynomus.security.** { *; }
+-keep class com.hierynomus.** { *; }
+-dontwarn com.hierynomus.**
 
-# Bouncy Castle registers JCA implementations by class name. SFTP uses an
-# app-specific provider name so Android's stripped platform BC is untouched.
--keep class org.bouncycastle.jcajce.provider.** { *; }
--keep class org.bouncycastle.jce.provider.** { *; }
+-keep class net.schmizz.sshj.** { *; }
+-dontwarn net.schmizz.sshj.**
 
-# mbassador creates the default handler invocation through Class.getConstructor().
--keepclassmembers,allowobfuscation class net.engio.mbassy.dispatch.ReflectiveHandlerInvocation {
-    public <init>(net.engio.mbassy.subscription.SubscriptionContext);
-}
+-keep class com.thegrizzlylabs.sardineandroid.** { *; }
+-dontwarn com.thegrizzlylabs.sardineandroid.**
 
-# Optional runtime dependencies of the network libraries (smbj, mbassador,
-# okhttp/bouncycastle) that are not present on Android. Safe to ignore.
+-keep class org.apache.commons.net.** { *; }
+-dontwarn org.apache.commons.net.**
+
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+
+-keep class net.engio.mbassy.** { *; }
+-dontwarn net.engio.mbassy.**
+
+-dontwarn ch.boye.httpclientandroidlib.**
+-dontwarn org.apache.http.**
+-dontwarn com.jcraft.jzlib.**
+-dontwarn net.i2p.crypto.eddsa.**
+-dontwarn org.slf4j.**
 -dontwarn javax.el.**
 -dontwarn org.bouncycastle.jsse.**
 -dontwarn org.conscrypt.**
 -dontwarn org.ietf.jgss.**
 -dontwarn org.openjsse.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
