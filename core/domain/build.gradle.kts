@@ -33,6 +33,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
+    compileOnly("androidx.compose.runtime:runtime:1.7.5")
 
     // Koin
     implementation(libs.koin.core)

@@ -1,5 +1,6 @@
 package dev.anilbeesetti.nextplayer.core.domain
 
+import androidx.compose.runtime.Immutable
 import dev.anilbeesetti.nextplayer.core.common.di.DiQualifiers
 import dev.anilbeesetti.nextplayer.core.data.repository.PreferencesRepository
 import dev.anilbeesetti.nextplayer.core.model.Folder
@@ -77,6 +78,7 @@ class GetSortedMediaUseCase(
  * @property videos List of video items to display.
  * @property folders List of folder items to display.
  */
+@Immutable
 data class MediaHolder(
     val videos: List<Video>,
     val folders: List<Folder>,

@@ -32,6 +32,9 @@ import coil3.util.component1
 import coil3.util.component2
 import kotlin.math.roundToInt
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 class VideoThumbnailDecoder(
     private val source: ImageSource,
     private val options: Options,
@@ -50,12 +53,15 @@ class VideoThumbnailDecoder(
         }
 
     @OptIn(ExperimentalCoilApi::class)
-    override suspend fun decode(): DecodeResult {
+    override suspend fun decode(): DecodeResult = withContext(Dispatchers.IO) {
         readFromDiskCache()?.use { snapshot ->
             val file = snapshot.data.toFile()
 
             // Read cached image dimensions (no pixel allocation)
-            val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            val boundsOpts = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
             file.inputStream().use { BitmapFactory.decodeStream(it, null, boundsOpts) }
             val cachedWidth = boundsOpts.outWidth
             val cachedHeight = boundsOpts.outHeight
@@ -70,31 +76,36 @@ class VideoThumbnailDecoder(
 
             if (cacheIsSufficient) {
                 val dstSize = computeDstSize(cachedWidth, cachedHeight)
-                val sampledBitmap = file.inputStream().use { BitmapFactory.decodeStream(it) }
-                val normalizedBitmap = normalizeBitmap(
-                    inBitmap = sampledBitmap,
-                    srcWidth = cachedWidth,
-                    srcHeight = cachedHeight,
-                    dstSize = dstSize,
-                )
-                return DecodeResult(
-                    image = normalizedBitmap.toDrawable(options.context.resources).asImage(),
-                    isSampled = DecodeUtils.computeSizeMultiplier(
+                val decodeOpts = BitmapFactory.Options().apply {
+                    inPreferredConfig = Bitmap.Config.RGB_565
+                }
+                val sampledBitmap = file.inputStream().use { BitmapFactory.decodeStream(it, null, decodeOpts) }
+                if (sampledBitmap != null) {
+                    val normalizedBitmap = normalizeBitmap(
+                        inBitmap = sampledBitmap,
                         srcWidth = cachedWidth,
                         srcHeight = cachedHeight,
-                        dstWidth = normalizedBitmap.width,
-                        dstHeight = normalizedBitmap.height,
-                        scale = options.scale,
-                        maxSize = options.maxBitmapSize,
-                    ) < 1.0,
-                )
+                        dstSize = dstSize,
+                    )
+                    return@withContext DecodeResult(
+                        image = normalizedBitmap.toDrawable(options.context.resources).asImage(),
+                        isSampled = DecodeUtils.computeSizeMultiplier(
+                            srcWidth = cachedWidth,
+                            srcHeight = cachedHeight,
+                            dstWidth = normalizedBitmap.width,
+                            dstHeight = normalizedBitmap.height,
+                            scale = options.scale,
+                            maxSize = options.maxBitmapSize,
+                        ) < 1.0,
+                    )
+                }
             }
         }
 
-        // Cache miss OR cache insufficient: decode fresh thumbnail
-        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 512 }, options.size.height.pxOrElse { 512 })
-        val targetWidth = requestedDstSize.width.pxOrElse { 512 }.coerceAtLeast(128)
-        val targetHeight = requestedDstSize.height.pxOrElse { 512 }.coerceAtLeast(128)
+        // Cache miss OR cache insufficient: decode fresh thumbnail with lightweight 240px default
+        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 240 }, options.size.height.pxOrElse { 240 })
+        val targetWidth = requestedDstSize.width.pxOrElse { 240 }.coerceIn(128, 240)
+        val targetHeight = requestedDstSize.height.pxOrElse { 240 }.coerceIn(128, 240)
 
         val rawBitmap: Bitmap = try {
             MediaMetadataRetriever().use { nativeRetriever ->
@@ -102,7 +113,10 @@ class VideoThumbnailDecoder(
 
                 val embeddedPicture = nativeRetriever.embeddedPicture
                 val embeddedPictureBitmap = embeddedPicture?.let { pictureBytes ->
-                    val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    val boundsOpts = BitmapFactory.Options().apply {
+                        inJustDecodeBounds = true
+                        inPreferredConfig = Bitmap.Config.RGB_565
+                    }
                     BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, boundsOpts)
                     val sampleSize = DecodeUtils.calculateInSampleSize(
                         srcWidth = boundsOpts.outWidth,
@@ -111,7 +125,10 @@ class VideoThumbnailDecoder(
                         dstHeight = targetHeight,
                         scale = options.scale,
                     )
-                    val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                    val decodeOpts = BitmapFactory.Options().apply {
+                        inSampleSize = sampleSize
+                        inPreferredConfig = Bitmap.Config.RGB_565
+                    }
                     BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, decodeOpts)
                 }
 
@@ -165,7 +182,7 @@ class VideoThumbnailDecoder(
 
         writeToDiskCache(scaledBitmap)
 
-        return DecodeResult(
+        return@withContext DecodeResult(
             image = scaledBitmap.toDrawable(options.context.resources).asImage(),
             isSampled = DecodeUtils.computeSizeMultiplier(
                 srcWidth = srcWidth,
@@ -221,7 +238,7 @@ class VideoThumbnailDecoder(
         val editor = diskCache.value?.openEditor(diskCacheKey) ?: return
         try {
             editor.data.toFile().outputStream().use { output ->
-                inBitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)
+                inBitmap.compress(Bitmap.CompressFormat.JPEG, 75, output)
             }
             editor.commit()
         } catch (_: Exception) {
@@ -239,13 +256,13 @@ class VideoThumbnailDecoder(
             maxSize = options.maxBitmapSize,
         ).toFloat()
 
-        if (scale == 1f) return inBitmap
+        if (scale in 0.98f..1.02f) return inBitmap
 
-        val dstWidth = (scale * inBitmap.width).roundToInt()
-        val dstHeight = (scale * inBitmap.height).roundToInt()
+        val dstWidth = (scale * inBitmap.width).roundToInt().coerceAtLeast(1)
+        val dstHeight = (scale * inBitmap.height).roundToInt().coerceAtLeast(1)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        val outBitmap = createBitmap(dstWidth, dstHeight, inBitmap.config ?: Bitmap.Config.ARGB_8888)
+        val outBitmap = createBitmap(dstWidth, dstHeight, inBitmap.config ?: Bitmap.Config.RGB_565)
         outBitmap.applyCanvas {
             scale(scale, scale)
             drawBitmap(inBitmap, 0f, 0f, paint)

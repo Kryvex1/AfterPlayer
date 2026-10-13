@@ -139,7 +139,8 @@ fun VideoListItem(
                 video = video,
                 preferences = preferences,
                 modifier = Modifier
-                    .width(min(150.dp, LocalConfiguration.current.screenWidthDp.dp * 0.35f)),
+                    .width(136.dp)
+                    .height(85.dp),
             )
         },
         content = {

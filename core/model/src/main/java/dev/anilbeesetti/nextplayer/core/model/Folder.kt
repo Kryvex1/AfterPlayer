@@ -1,7 +1,9 @@
 package dev.anilbeesetti.nextplayer.core.model
 
+import androidx.compose.runtime.Immutable
 import java.io.Serializable
 
+@Immutable
 data class Folder(
     val name: String,
     val path: String,

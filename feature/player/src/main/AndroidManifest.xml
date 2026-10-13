@@ -8,6 +8,7 @@
     <application android:usesCleartextTraffic="true">
         <activity
             android:name=".PlayerActivity"
+            android:hardwareAccelerated="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode|keyboard|keyboardHidden|navigation"
             android:exported="true"
             android:launchMode="singleTask"

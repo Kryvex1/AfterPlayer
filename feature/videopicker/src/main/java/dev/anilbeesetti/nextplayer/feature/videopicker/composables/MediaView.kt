@@ -114,29 +114,36 @@ fun MediaView(
             itemsIndexed(
                 items = mediaHolder.folders,
                 key = { _, folder -> folder.path },
+                contentType = { _, _ -> "folder_item" },
                 span = { _, _ -> GridItemSpan(singleFolderSpan) },
             ) { index, folder ->
-                val selected by remember { derivedStateOf { selectionManager.isFolderSelected(folder) } }
-                FolderItem(
-                    folder = folder,
-                    isRecentlyPlayedFolder = folder.path == recentlyPlayedFolder?.path,
-                    preferences = preferences,
-                    modifier = Modifier.restorableFocusItem(focusState, folder.path),
-                    selected = selected,
-                    isFirstItem = index == 0,
-                    isLastItem = index == mediaHolder.folders.lastIndex,
-                    onClick = {
+                val isSelected = selectionManager.isFolderSelected(folder)
+                val onClick = remember(folder.path, selectionManager.isInSelectionMode) {
+                    {
                         if (selectionManager.isInSelectionMode) {
                             haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                             selectionManager.toggleFolderSelection(folder)
                         } else {
                             onFolderClick(folder.path)
                         }
-                    },
-                    onLongClick = {
+                    }
+                }
+                val onLongClick = remember(folder.path) {
+                    {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         selectionManager.toggleFolderSelection(folder)
-                    },
+                    }
+                }
+                FolderItem(
+                    folder = folder,
+                    isRecentlyPlayedFolder = folder.path == recentlyPlayedFolder?.path,
+                    preferences = preferences,
+                    modifier = Modifier.restorableFocusItem(focusState, folder.path),
+                    selected = isSelected,
+                    isFirstItem = index == 0,
+                    isLastItem = index == mediaHolder.folders.lastIndex,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
                 )
             }
 
@@ -154,10 +161,27 @@ fun MediaView(
 
             itemsIndexed(
                 items = mediaHolder.videos,
-                key = { _, video -> video.uriString },
+                key = { _, video -> video.id },
+                contentType = { _, _ -> "video_item" },
                 span = { _, _ -> GridItemSpan(singleVideoSpan) },
             ) { index, video ->
-                val selected by remember { derivedStateOf { selectionManager.isVideoSelected(video) } }
+                val isSelected = selectionManager.isVideoSelected(video)
+                val onClick = remember(video.uriString, selectionManager.isInSelectionMode) {
+                    {
+                        if (selectionManager.isInSelectionMode) {
+                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                            selectionManager.toggleVideoSelection(video)
+                        } else {
+                            onVideoClick(video.uriString.toUri())
+                        }
+                    }
+                }
+                val onLongClick = remember(video.uriString) {
+                    {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        selectionManager.toggleVideoSelection(video)
+                    }
+                }
                 VideoItem(
                     video = video,
                     preferences = preferences,
@@ -165,19 +189,9 @@ fun MediaView(
                     modifier = Modifier.restorableFocusItem(focusState, video.uriString),
                     isFirstItem = index == 0,
                     isLastItem = index == mediaHolder.videos.lastIndex,
-                    selected = selected,
-                    onClick = {
-                        if (selectionManager.isInSelectionMode) {
-                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                            selectionManager.toggleVideoSelection(video)
-                        } else {
-                            onVideoClick(video.uriString.toUri())
-                        }
-                    },
-                    onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        selectionManager.toggleVideoSelection(video)
-                    },
+                    selected = isSelected,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
                 )
             }
         }

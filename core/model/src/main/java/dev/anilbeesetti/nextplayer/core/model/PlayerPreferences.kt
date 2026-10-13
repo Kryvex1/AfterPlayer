@@ -63,7 +63,7 @@ data class PlayerPreferences(
         const val DEFAULT_SEEK_SENSITIVITY = 0.50f
         const val DEFAULT_VOLUME_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_BRIGHTNESS_GESTURE_SENSITIVITY = 0.50f
-        const val DEFAULT_SUBTITLE_TEXT_SIZE = 20
+        const val DEFAULT_SUBTITLE_TEXT_SIZE = 16
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
     }
 }

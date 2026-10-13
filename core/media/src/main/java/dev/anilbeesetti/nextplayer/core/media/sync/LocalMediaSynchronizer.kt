@@ -41,9 +41,11 @@ class LocalMediaSynchronizer(
 
     private var mediaSyncingJob: Job? = null
 
-    override suspend fun refresh(path: String?): Boolean {
-        return path?.let { context.scanPaths(listOf(path)) }
-            ?: context.getStorageVolumes().all { context.scanStorage(it.path) }
+    override suspend fun refresh(path: String?): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            path?.let { context.scanPaths(listOf(it)) }
+                ?: context.getStorageVolumes().all { context.scanStorage(it.path) }
+        }.getOrDefault(false)
     }
 
     override fun startSync() {

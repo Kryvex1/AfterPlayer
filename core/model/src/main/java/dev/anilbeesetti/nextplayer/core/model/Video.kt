@@ -1,8 +1,10 @@
 package dev.anilbeesetti.nextplayer.core.model
 
+import androidx.compose.runtime.Immutable
 import java.io.Serializable
 import java.util.Date
 
+@Immutable
 data class Video(
     val id: Long,
     val path: String,

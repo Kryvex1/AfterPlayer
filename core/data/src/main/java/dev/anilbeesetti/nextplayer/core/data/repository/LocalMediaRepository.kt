@@ -22,11 +22,13 @@ import dev.anilbeesetti.nextplayer.core.model.Video
 import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
 import java.util.Date
 import kotlin.math.absoluteValue
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -39,10 +41,13 @@ class LocalMediaRepository(
     private val context: Context,
 ) : MediaRepository {
 
+    private val lastSavedPositions = ConcurrentHashMap<String, Long>()
+
     override fun observeFolders(folderPath: String?): Flow<List<Folder>> {
-        return mediaService.observeFolders(folderPath).map { mediaFolders ->
-            mediaFolders.map { it.toFolder() }
-        }.flowOn(Dispatchers.Default)
+        return mediaService.observeFolders(folderPath)
+            .map { mediaFolders -> mediaFolders.map { it.toFolder() } }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
     }
 
     override fun observeVideos(folderPath: String?): Flow<List<Video>> {
@@ -52,7 +57,7 @@ class LocalMediaRepository(
                 val mediaState = statesMap[mediaVideo.uri.toString()]
                 mediaVideo.toVideo(mediaState)
             }
-        }.flowOn(Dispatchers.Default)
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     override suspend fun fetchFolders(folderPath: String?): List<Folder> = withContext(Dispatchers.IO) {
@@ -75,11 +80,13 @@ class LocalMediaRepository(
                 .map { state ->
                     videosByUri[state.uriString]?.toVideo(state) ?: state.toHistoryVideo()
                 }
-        }.flowOn(Dispatchers.Default)
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     override fun observeTrashVideos(): Flow<List<Video>> {
-        return mediaService.observeTrashVideos().map { videos -> videos.map { it.toVideo() } }
+        return mediaService.observeTrashVideos()
+            .map { videos -> videos.map { it.toVideo() } }
+            .distinctUntilChanged()
     }
 
     override suspend fun getVideoByUri(uri: String): Video? = coroutineScope {
@@ -110,10 +117,12 @@ class LocalMediaRepository(
     }
 
     override suspend fun clearPlaybackHistory() {
+        lastSavedPositions.clear()
         mediumStateDao.clearPlaybackHistory()
     }
 
     override suspend fun removeVideosFromPlaybackHistory(uris: List<String>) {
+        uris.forEach { lastSavedPositions.remove(it) }
         mediumStateDao.removeVideosFromPlaybackHistory(uris)
     }
 
@@ -129,7 +138,13 @@ class LocalMediaRepository(
     }
 
     override suspend fun updateMediumPosition(uri: String, position: Long) {
+        val lastSaved = lastSavedPositions[uri]
+        if (lastSaved != null && position != 0L && (position - lastSaved).absoluteValue < 2000L) {
+            return
+        }
+        lastSavedPositions[uri] = position
         val stateEntity = mediumStateDao.get(uri) ?: MediumStateEntity(uriString = uri)
+        if (stateEntity.playbackPosition == position) return
         mediumStateDao.upsert(
             mediumState = stateEntity.copy(
                 playbackPosition = position,

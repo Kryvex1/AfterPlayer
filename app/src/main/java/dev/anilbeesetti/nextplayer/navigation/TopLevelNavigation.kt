@@ -182,19 +182,24 @@ class TopLevelNavState(
         entryProvider: (NavKey) -> NavEntry<NavKey>,
         entryDecorator: NavEntryDecorator<NavKey>,
     ): SnapshotStateList<NavEntry<NavKey>> {
-        val decoratedByRoute = LinkedHashMap<NavKey, List<NavEntry<NavKey>>>()
-        for (dest in destinations) {
-            decoratedByRoute[dest.route] = rememberDecoratedNavEntries(
+        val saveableDecorator = rememberSaveableStateHolderNavEntryDecorator<NavKey>()
+        val viewModelDecorator = rememberViewModelStoreNavEntryDecorator<NavKey>()
+        val decorators = remember(entryDecorator, saveableDecorator, viewModelDecorator) {
+            listOf(saveableDecorator, viewModelDecorator, entryDecorator)
+        }
+
+        val decoratedByRoute = destinations.associate { dest ->
+            dest.route to rememberDecoratedNavEntries(
                 backStack = backStacks.getValue(dest.route),
-                entryDecorators = listOf(
-                    rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberViewModelStoreNavEntryDecorator(),
-                    entryDecorator,
-                ),
+                entryDecorators = decorators,
                 entryProvider = entryProvider,
             )
         }
-        return stacksInUse.flatMap { decoratedByRoute.getValue(it) }.toMutableStateList()
+
+        val activeStacks = stacksInUse
+        return remember(activeStacks, decoratedByRoute) {
+            activeStacks.flatMap { decoratedByRoute.getValue(it) }.toMutableStateList()
+        }
     }
 }
 
@@ -306,11 +311,6 @@ fun NavigationView(
     isSelected: (TopLevelDestination) -> Boolean,
     onDestinationClick: (TopLevelDestination) -> Unit,
 ) {
-    val animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
-    val boundsTransform = remember {
-        BoundsTransform { _, _ -> animationSpec }
-    }
-
     Box(
         modifier = modifier
             .graphicsLayer(
@@ -321,66 +321,43 @@ fun NavigationView(
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(4.dp),
     ) {
-        LookaheadScope {
-            val pill = remember {
-                movableContentOf<BoxScope> { scope ->
-                    with(scope) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .animateBounds(
-                                    lookaheadScope = this@LookaheadScope,
-                                    boundsTransform = boundsTransform,
-                                )
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            destinations.forEach { destination ->
+                val selected = isSelected(destination)
+                val backgroundColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                    animationSpec = tween(durationMillis = 150, easing = LinearEasing),
+                    label = "tab_bg",
+                )
+                val contentColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    animationSpec = tween(durationMillis = 150, easing = LinearEasing),
+                    label = "tab_content",
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(backgroundColor)
+                        .selectable(
+                            selected = selected,
+                            onClick = { onDestinationClick(destination) },
+                            role = Role.Tab,
+                            indication = null,
+                            interactionSource = null,
                         )
-                    }
-                }
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                destinations.forEach { destination ->
-                    val isSelected = isSelected(destination)
-                    Box(
-                        modifier = Modifier.zIndex(if (isSelected) 0f else 1f),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (isSelected) {
-                            pill(this)
-                        }
-                        Column(
-                            Modifier
-                                .tvFocusRing(shape = RoundedCornerShape(99.dp))
-                                .clip(CircleShape)
-                                .selectable(
-                                    selected = isSelected,
-                                    onClick = { onDestinationClick(destination) },
-                                    role = Role.Tab,
-                                    indication = null,
-                                    interactionSource = null,
-                                )
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            CompositionLocalProvider(
-                                LocalContentColor provides if (isSelected) {
-                                    MaterialTheme.colorScheme.onSecondaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = destination.icon,
-                                    contentDescription = stringResource(destination.labelRes),
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            }
-                        }
+                        .tvFocusRing(shape = RoundedCornerShape(99.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CompositionLocalProvider(LocalContentColor provides contentColor) {
+                        Icon(
+                            imageVector = destination.icon,
+                            contentDescription = stringResource(destination.labelRes),
+                            modifier = Modifier.size(24.dp),
+                        )
                     }
                 }
             }

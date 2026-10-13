@@ -150,14 +150,12 @@ class MainActivity : FragmentActivity() {
                         fabStates = topLevelFabStates,
                         showBottomBar = showTopLevelBottomBar,
                     ) { layoutPaddingValues ->
-                        val railPadding = layoutPaddingValues.calculateStartPadding(LocalLayoutDirection.current)
-                        val navigationInsetsDecorator = remember(navState, railPadding) {
+                        val topLevelKeys = navState.topLevelContentKeys
+                        val navigationInsetsDecorator = remember(topLevelKeys) {
                             NavEntryDecorator<NavKey> { entry ->
-                                // Reserve rail space per entry without resizing the animated display.
                                 Box(
-                                    Modifier.thenIf(navState.topLevelContentKeys.contains(entry.contentKey)) {
-                                        padding(start = railPadding)
-                                            .consumeWindowInsets(WindowInsets.displayCutout.only(WindowInsetsSides.Start))
+                                    Modifier.thenIf(topLevelKeys.contains(entry.contentKey)) {
+                                        consumeWindowInsets(WindowInsets.displayCutout.only(WindowInsetsSides.Start))
                                     },
                                 ) {
                                     entry.Content()

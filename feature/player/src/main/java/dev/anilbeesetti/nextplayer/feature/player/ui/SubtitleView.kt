@@ -1,6 +1,7 @@
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.accessibility.CaptioningManager
@@ -36,6 +37,7 @@ fun SubtitleView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
             SubtitleView(context).apply {
+                setBottomPaddingFraction(0.04f)
                 applySubtitleStyle(
                     context = context,
                     subtitleView = this,
@@ -47,6 +49,7 @@ fun SubtitleView(
         update = { subtitleView ->
             val cues = cuesState.currentCues?.cues
             subtitleView.setCues(cues)
+            subtitleView.setBottomPaddingFraction(0.04f)
             applySubtitleStyle(
                 context = subtitleView.context,
                 subtitleView = subtitleView,
@@ -54,9 +57,15 @@ fun SubtitleView(
                 configuration = configuration,
             )
             if (isInPictureInPictureMode) {
-                subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION)
+                subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 0.75f)
             } else {
-                subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, configuration.textSize.toFloat())
+                val isPortrait = subtitleView.context.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+                val targetSize = if (isPortrait) {
+                    (configuration.textSize.toFloat() * 0.85f).coerceAtLeast(8f)
+                } else {
+                    configuration.textSize.toFloat()
+                }
+                subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, targetSize)
             }
         },
     )
@@ -104,7 +113,13 @@ private fun applySubtitleStyle(
             finalTypeface,
         )
         subtitleView.setStyle(userStyle)
-        subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, configuration.textSize.toFloat())
+        val isPortrait = context.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        val targetSize = if (isPortrait) {
+            (configuration.textSize.toFloat() * 0.85f).coerceAtLeast(8f)
+        } else {
+            configuration.textSize.toFloat()
+        }
+        subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, targetSize)
     }
     subtitleView.setApplyEmbeddedStyles(configuration.applyEmbeddedStyles)
 }

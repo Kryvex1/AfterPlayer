@@ -145,11 +145,11 @@ private fun SubtitlePreferencesScreenContent(
                 )
                 PreferenceSlider(
                     title = stringResource(id = R.string.subtitle_text_size),
-                    description = state.preferences.subtitleTextSize.toString(),
+                    description = "${state.preferences.subtitleTextSize} sp",
                     icon = NextIcons.FontSize,
                     enabled = state.preferences.useSystemCaptionStyle.not(),
                     value = state.preferences.subtitleTextSize.toFloat(),
-                    valueRange = 10f..60f,
+                    valueRange = 8f..36f,
                     onValueChange = { onAction(SubtitlePreferencesUiEvent.UpdateSubtitleFontSize(it.toInt())) },
                     trailingContent = {
                         FilledIconButton(

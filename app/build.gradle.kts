@@ -18,15 +18,14 @@ android {
         versionCode = 74
         versionName = "1.26"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     splits {
         abi {
             isEnable = false
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            isUniversalApk = true
         }
     }
 

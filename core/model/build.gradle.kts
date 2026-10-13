@@ -17,6 +17,7 @@ tasks.withType<JavaCompile> {
 }
 
 dependencies {
+    compileOnly("androidx.compose.runtime:runtime:1.7.5")
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit4)
 }

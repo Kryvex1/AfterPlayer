@@ -1,30 +1,21 @@
 # -------------------------------------------------------------
-# Android & Core Optimization
+# General Attributes & Optimization
 # -------------------------------------------------------------
--dontobfuscate
-
-# General Attributes
--keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -keepattributes Exceptions,Deprecated,Synthetic
 
-# Keep all native JNI methods
+# Keep native JNI methods
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
 # -------------------------------------------------------------
-# Media3 & ExoPlayer
+# Media3 & NextLib JNI
 # -------------------------------------------------------------
--keep class androidx.media3.** { *; }
--keep interface androidx.media3.** { *; }
 -dontwarn androidx.media3.**
-
-# -------------------------------------------------------------
-# NextLib FFmpeg & MediaInfo JNI Decoders
-# -------------------------------------------------------------
--keep class io.github.anilbeesetti.nextlib.** { *; }
--keep interface io.github.anilbeesetti.nextlib.** { *; }
 -dontwarn io.github.anilbeesetti.nextlib.**
+
+-keep class io.github.anilbeesetti.nextlib.mediainfo.** { *; }
 
 # -------------------------------------------------------------
 # Kotlin Coroutines & Reflection
@@ -46,22 +37,24 @@
 -keepclasseswithmembers class * {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep class kotlinx.serialization.** { *; }
+-keepclassmembers class * implements kotlinx.serialization.KSerializer {
+    <init>(...);
+}
 -dontwarn kotlinx.serialization.**
 
 # -------------------------------------------------------------
 # Koin Dependency Injection
 # -------------------------------------------------------------
--keep class org.koin.** { *; }
--keep interface org.koin.** { *; }
+-keepclassmembers class * {
+    @org.koin.core.annotation.* <init>(...);
+    @org.koin.core.annotation.* <methods>;
+}
 -dontwarn org.koin.**
 
 # -------------------------------------------------------------
-# Coil 3 Image Loading & Custom Decoders
+# Coil 3 Image Loading
 # -------------------------------------------------------------
--keep class coil3.** { *; }
 -dontwarn coil3.**
--keep class dev.anilbeesetti.nextplayer.** { *; }
 
 # -------------------------------------------------------------
 # Jetpack Room & SQLite
@@ -79,38 +72,28 @@
 # -------------------------------------------------------------
 # Reorderable
 # -------------------------------------------------------------
--keep class sh.calvin.reorderable.** { *; }
 -dontwarn sh.calvin.reorderable.**
 
 # -------------------------------------------------------------
 # Universal Chardet
 # -------------------------------------------------------------
--keep class org.mozilla.universalchardet.** { *; }
 -dontwarn org.mozilla.universalchardet.**
 
 # -------------------------------------------------------------
-# SMBJ & Network Providers (SMB, SFTP, WebDAV, FTP)
+# SMBJ, SSHJ, Sardine, BouncyCastle, Commons Net
 # -------------------------------------------------------------
 -dontwarn org.xmlpull.v1.**
 -dontnote org.xmlpull.v1.**
 
--keep class com.hierynomus.** { *; }
 -dontwarn com.hierynomus.**
-
--keep class net.schmizz.sshj.** { *; }
 -dontwarn net.schmizz.sshj.**
-
--keep class com.thegrizzlylabs.sardineandroid.** { *; }
 -dontwarn com.thegrizzlylabs.sardineandroid.**
-
--keep class org.apache.commons.net.** { *; }
 -dontwarn org.apache.commons.net.**
-
--keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
-
--keep class net.engio.mbassy.** { *; }
 -dontwarn net.engio.mbassy.**
+
+-keep class org.bouncycastle.jcajce.provider.** { *; }
+-keep class org.bouncycastle.jce.provider.** { *; }
 
 -dontwarn ch.boye.httpclientandroidlib.**
 -dontwarn org.apache.http.**
@@ -124,4 +107,5 @@
 -dontwarn org.openjsse.**
 -dontwarn okhttp3.**
 -dontwarn okio.**
+
 

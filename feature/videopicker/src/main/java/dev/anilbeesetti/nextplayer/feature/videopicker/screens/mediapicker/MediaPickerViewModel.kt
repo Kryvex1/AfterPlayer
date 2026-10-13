@@ -139,9 +139,11 @@ class MediaPickerViewModel(
     }
 
     private fun collectMedia() {
-        mediaCollectJob?.cancel()
-        stateInternal.update { currentState ->
-            currentState.copy(mediaDataState = DataState.Loading)
+        if (mediaCollectJob?.isActive == true) return
+        if (stateInternal.value.mediaDataState !is DataState.Success) {
+            stateInternal.update { currentState ->
+                currentState.copy(mediaDataState = DataState.Loading)
+            }
         }
         mediaCollectJob = viewModelScope.launch {
             launch {
@@ -408,8 +410,14 @@ class MediaPickerViewModel(
     private fun refresh() {
         viewModelScope.launch {
             stateInternal.update { it.copy(refreshing = true) }
-            mediaSynchronizer.refresh()
-            stateInternal.update { it.copy(refreshing = false) }
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(4000L) {
+                    mediaSynchronizer.refresh()
+                }
+            } catch (_: Exception) {
+            } finally {
+                stateInternal.update { it.copy(refreshing = false) }
+            }
         }
     }
 

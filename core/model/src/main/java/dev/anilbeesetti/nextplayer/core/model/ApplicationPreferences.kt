@@ -1,7 +1,9 @@
 package dev.anilbeesetti.nextplayer.core.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
+@Immutable
 @Serializable
 data class ApplicationPreferences(
     val sortBy: Sort.By = Sort.By.TITLE,
