@@ -108,4 +108,11 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
+# -------------------------------------------------------------
+# Navigation 3, ViewModels & Compose
+# -------------------------------------------------------------
+-dontwarn androidx.navigation3.**
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+-dontwarn androidx.compose.**
+
 

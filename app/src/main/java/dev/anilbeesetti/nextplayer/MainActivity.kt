@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -233,7 +234,8 @@ fun NavigationLayout(
             content = {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .thenIf(isTv) {
                             // The FAB sits outside screen content, whose full-height focus groups
                             // overlap it. Enter the content explicitly instead of searching the rail.

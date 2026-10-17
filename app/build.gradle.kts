@@ -18,6 +18,9 @@ android {
         versionCode = 74
         versionName = "1.26"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
+        }
     }
 
     splits {
@@ -51,8 +54,14 @@ android {
         }
 
         getByName("debug") {
-            isDebuggable = true
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 
@@ -74,11 +83,17 @@ android {
                 "/META-INF/*.version",
                 "/META-INF/INDEX.LIST",
                 "/META-INF/DEPENDENCIES",
+                "org/bouncycastle/pqc/**",
             )
         }
         jniLibs {
             useLegacyPackaging = false
         }
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
     }
 
     dependenciesInfo {

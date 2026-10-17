@@ -61,6 +61,8 @@ internal fun MediaPlayerControls(
     isPipSupported: Boolean,
     onPictureInPictureClick: () -> Unit,
     modifier: Modifier = Modifier,
+    overlayView: OverlayView? = null,
+    onOverlayChange: (OverlayView?) -> Unit = {},
 ) {
     val playerPreferences = state.playerPreferences
     val metadataState = rememberMetadataState(player)
@@ -72,14 +74,13 @@ internal fun MediaPlayerControls(
         controls = controlsVisibilityState,
         seekIncrementMs = playerPreferences.seekIncrement.seconds.inWholeMilliseconds,
     )
-    var overlayView by remember { mutableStateOf<OverlayView?>(null) }
     LaunchedEffect(metadataState.mediaId) {
-        if (overlayView == OverlayView.CHAPTERS) overlayView = null
+        if (overlayView == OverlayView.CHAPTERS) onOverlayChange(null)
     }
 
     fun showOverlay(overlay: OverlayView) {
         controlsVisibilityState.hideControls()
-        overlayView = overlay
+        onOverlayChange(overlay)
     }
 
     val context = LocalContext.current
@@ -182,14 +183,14 @@ internal fun MediaPlayerControls(
                 onChapterSelected = { chapter ->
                     if (player.isCurrentMediaItemSeekable) {
                         player.seekTo(chapter.startTimeMs)
-                        overlayView = null
+                        onOverlayChange(null)
                         controlsVisibilityState.showControls()
                     }
                 },
                 videoDecoderMode = state.decoderServiceState.videoMode,
                 audioDecoderMode = state.decoderServiceState.audioMode,
                 videoContentScale = videoZoomAndContentScaleState.videoContentScale,
-                onDismiss = { overlayView = null },
+                onDismiss = { onOverlayChange(null) },
                 onVideoDecoderModeSelected = { onAction(PlayerAction.SetVideoDecoderMode(it)) },
                 onAudioDecoderModeSelected = { onAction(PlayerAction.SetAudioDecoderMode(it)) },
                 onSelectSubtitleClick = { onAction(PlayerAction.SelectSubtitle) },
@@ -202,7 +203,7 @@ internal fun MediaPlayerControls(
 
     BackHandler {
         when {
-            overlayView != null -> overlayView = null
+            overlayView != null -> onOverlayChange(null)
             isTv && controlsVisibilityState.controlsVisible -> controlsVisibilityState.hideControls()
             else -> onAction(PlayerAction.NavigateUp)
         }

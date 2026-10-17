@@ -33,6 +33,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -99,9 +103,9 @@ fun BoxScope.OverlayView(
         }) + fadeOut(animationSpec = tween(200)),
     ) {
         if (configuration.isPortrait) {
-            // Portrait: Bottom Sheet with Top Edge Pill Handle
+            // Portrait: Bottom Sheet
             Surface(
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 tonalElevation = 6.dp,
                 shadowElevation = 10.dp,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -115,147 +119,77 @@ fun BoxScope.OverlayView(
                         .focusGroup()
                         .padding(end = endPadding),
                 ) {
-                    // Top Edge Drawer Handle Button (Pill Tab)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp, bottom = 6.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = false, radius = 24.dp),
-                                role = Role.Button,
-                                onClickLabel = "Close drawer",
-                                onClick = onDismiss,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(5.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
-                        )
-                    }
-
-                    // Header with title and quick-dismiss pill handle trigger
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 6.dp),
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = title,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f),
                         )
-                        // Pill trigger on the header
-                        Surface(
+                        FilledTonalIconButton(
                             onClick = onDismiss,
+                            modifier = Modifier.size(36.dp),
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            modifier = Modifier.size(width = 36.dp, height = 28.dp),
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(14.dp)
-                                        .height(3.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.onSurfaceVariant),
-                                )
-                            }
+                            Icon(
+                                imageVector = NextIcons.Close,
+                                contentDescription = "Close",
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                     }
-                    Spacer(modifier = Modifier.size(8.dp))
                     content()
                 }
             }
         } else {
-            // Landscape: Side Drawer with Edge Handle Tab
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            // Landscape: Clean Side Drawer
+            Surface(
+                shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
+                tonalElevation = 6.dp,
+                shadowElevation = 10.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = modifier
-                    .fillMaxWidth(0.48f)
+                    .fillMaxWidth(0.44f)
                     .fillMaxHeight(),
             ) {
-                // Interactive Drawer Toggle Handle directly on the edge of the panel
-                Surface(
-                    onClick = onDismiss,
-                    shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp,
+                Column(
                     modifier = Modifier
-                        .size(width = 24.dp, height = 72.dp),
+                        .focusRequester(focusRequester)
+                        .focusGroup()
+                        .padding(top = 16.dp)
+                        .padding(end = endPadding),
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        // Vertical pill handle indicator
-                        Box(
-                            modifier = Modifier
-                                .width(4.dp)
-                                .height(32.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)),
-                        )
-                    }
-                }
-
-                // Drawer Panel Surface
-                Surface(
-                    shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
-                    tonalElevation = 6.dp,
-                    shadowElevation = 10.dp,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                ) {
-                    Column(
+                    Row(
                         modifier = Modifier
-                            .focusRequester(focusRequester)
-                            .focusGroup()
-                            .padding(top = 20.dp)
-                            .padding(end = endPadding),
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        FilledTonalIconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
                         ) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                modifier = Modifier.weight(1f),
+                            Icon(
+                                imageVector = NextIcons.Close,
+                                contentDescription = "Close",
+                                modifier = Modifier.size(18.dp),
                             )
-                            // Pill handle button on header
-                            Surface(
-                                onClick = onDismiss,
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                modifier = Modifier.size(width = 36.dp, height = 28.dp),
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Box(
-                                        modifier = Modifier
-                                            .width(14.dp)
-                                            .height(3.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.onSurfaceVariant),
-                                    )
-                                }
-                            }
                         }
-                        Spacer(modifier = Modifier.size(8.dp))
-                        content()
                     }
+                    Spacer(modifier = Modifier.size(8.dp))
+                    content()
                 }
             }
         }

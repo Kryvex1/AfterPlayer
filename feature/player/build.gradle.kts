@@ -44,7 +44,6 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:media"))
     implementation(project(":core:model"))
-    implementation(project(":core:ui"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.pip)

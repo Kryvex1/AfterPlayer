@@ -66,6 +66,7 @@ fun BoxScope.PlaylistView(
     modifier: Modifier = Modifier,
     show: Boolean,
     player: Player,
+    onDismiss: () -> Unit = {},
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val playlistState = rememberPlaylistState(player)
@@ -89,6 +90,7 @@ fun BoxScope.PlaylistView(
         modifier = modifier,
         show = show,
         title = stringResource(R.string.now_playing),
+        onDismiss = onDismiss,
     ) {
         if (playlistState.mediaItemCount == 0) {
             // Empty state

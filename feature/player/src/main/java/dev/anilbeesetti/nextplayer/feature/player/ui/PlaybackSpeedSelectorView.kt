@@ -48,6 +48,7 @@ fun BoxScope.PlaybackSpeedSelectorView(
     modifier: Modifier = Modifier,
     show: Boolean,
     player: Player,
+    onDismiss: () -> Unit = {},
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val playbackParametersState = rememberPlaybackParametersState(player)
@@ -56,6 +57,7 @@ fun BoxScope.PlaybackSpeedSelectorView(
         modifier = modifier,
         show = show,
         title = stringResource(R.string.select_playback_speed),
+        onDismiss = onDismiss,
     ) {
         Column(
             modifier = Modifier

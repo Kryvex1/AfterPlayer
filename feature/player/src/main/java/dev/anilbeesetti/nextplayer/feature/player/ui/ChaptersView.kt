@@ -28,8 +28,13 @@ fun BoxScope.ChaptersView(
     chapters: List<Chapter>,
     currentChapterIndex: Int,
     onChapterSelected: (Chapter) -> Unit,
+    onDismiss: () -> Unit = {},
 ) {
-    OverlayView(show = show, title = stringResource(R.string.chapters)) {
+    OverlayView(
+        show = show,
+        title = stringResource(R.string.chapters),
+        onDismiss = onDismiss,
+    ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().navigationBarsPadding(),
             state = rememberLazyListState(initialFirstVisibleItemIndex = currentChapterIndex.coerceAtLeast(0)),
@@ -40,7 +45,10 @@ fun BoxScope.ChaptersView(
                     selected = index == currentChapterIndex,
                     isFirstItem = index == 0,
                     isLastItem = index == chapters.lastIndex,
-                    onClick = { onChapterSelected(chapter) },
+                    onClick = {
+                        onChapterSelected(chapter)
+                        onDismiss()
+                    },
                     content = {
                         Text(
                             text = chapter.titleOrDefault(index),

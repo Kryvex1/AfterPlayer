@@ -1,18 +1,29 @@
 package dev.anilbeesetti.nextplayer.feature.player
 
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.annotation.OptIn
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.unit.dp
+import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.lifecycle.Lifecycle
@@ -152,30 +163,46 @@ internal fun MediaPlayerContent(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    var overlayView by remember { mutableStateOf<OverlayView?>(null) }
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isSidePanelOpen = overlayView != null && isLandscape
+    val videoScaleEndPadding by animateDpAsState(
+        targetValue = if (isSidePanelOpen) (configuration.screenWidthDp * 0.44f).dp else 0.dp,
+        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        label = "video_shrink_padding",
+    )
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (pictureInPictureState != null) {
-            PlayerContentFrame(
-                player = player,
-                pictureInPictureState = pictureInPictureState,
-                videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                subtitleConfiguration = SubtitleConfiguration(
-                    useSystemCaptionStyle = playerPreferences.useSystemCaptionStyle,
-                    showBackground = playerPreferences.subtitleBackground,
-                    font = playerPreferences.subtitleFont,
-                    textSize = playerPreferences.subtitleTextSize,
-                    textBold = playerPreferences.subtitleTextBold,
-                    applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
-                ),
-            )
-            if (volumeAndBrightnessGestureState != null) {
-                PlayerGestures(
-                    controlsVisibilityState = controlsVisibilityState,
-                    tapGestureState = tapGestureState,
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = videoScaleEndPadding),
+            ) {
+                PlayerContentFrame(
+                    player = player,
                     pictureInPictureState = pictureInPictureState,
-                    seekGestureState = seekGestureState,
                     videoZoomAndContentScaleState = videoZoomAndContentScaleState,
-                    volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
+                    subtitleConfiguration = SubtitleConfiguration(
+                        useSystemCaptionStyle = playerPreferences.useSystemCaptionStyle,
+                        showBackground = playerPreferences.subtitleBackground,
+                        font = playerPreferences.subtitleFont,
+                        textSize = playerPreferences.subtitleTextSize,
+                        textBold = playerPreferences.subtitleTextBold,
+                        applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                    ),
                 )
+                if (volumeAndBrightnessGestureState != null) {
+                    PlayerGestures(
+                        controlsVisibilityState = controlsVisibilityState,
+                        tapGestureState = tapGestureState,
+                        pictureInPictureState = pictureInPictureState,
+                        seekGestureState = seekGestureState,
+                        videoZoomAndContentScaleState = videoZoomAndContentScaleState,
+                        volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
+                    )
+                }
             }
         }
         MediaPlayerControls(
@@ -187,6 +214,8 @@ internal fun MediaPlayerContent(
             seekGestureState = seekGestureState,
             videoZoomAndContentScaleState = videoZoomAndContentScaleState,
             isPipSupported = pictureInPictureState?.isPipSupported == true,
+            overlayView = overlayView,
+            onOverlayChange = { overlayView = it },
             onPictureInPictureClick = {
                 pictureInPictureState?.let {
                     if (!it.hasPipPermission) {

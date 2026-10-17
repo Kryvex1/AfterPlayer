@@ -77,6 +77,7 @@ fun BoxScope.OverlayShowView(
     PlaybackSpeedSelectorView(
         show = overlayView == OverlayView.PLAYBACK_SPEED,
         player = player,
+        onDismiss = onDismiss,
     )
 
     VideoContentScaleSelectorView(
@@ -89,6 +90,7 @@ fun BoxScope.OverlayShowView(
     PlaylistView(
         show = overlayView == OverlayView.PLAYLIST,
         player = player,
+        onDismiss = onDismiss,
     )
 
     ChaptersView(
@@ -96,6 +98,14 @@ fun BoxScope.OverlayShowView(
         chapters = chapters,
         currentChapterIndex = currentChapterIndex,
         onChapterSelected = onChapterSelected,
+        onDismiss = onDismiss,
+    )
+
+    MediaDetailsView(
+        show = overlayView == OverlayView.MEDIA_DETAILS,
+        player = player,
+        title = player.mediaMetadata.title?.toString() ?: "",
+        onDismiss = onDismiss,
     )
 }
 
@@ -110,4 +120,5 @@ enum class OverlayView {
     VIDEO_CONTENT_SCALE,
     PLAYLIST,
     CHAPTERS,
+    MEDIA_DETAILS,
 }

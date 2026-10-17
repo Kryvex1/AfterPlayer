@@ -9,6 +9,7 @@ import dev.anilbeesetti.nextplayer.core.ui.R
 fun Font.name(): String {
     val stringRes = when (this) {
         Font.DEFAULT -> R.string.default_name
+        Font.POPPINS -> R.string.poppins
         Font.MONOSPACE -> R.string.monospace
         Font.SANS_SERIF -> R.string.sans_serif
         Font.SERIF -> R.string.serif

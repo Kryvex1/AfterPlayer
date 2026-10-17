@@ -7,6 +7,9 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.animateBounds
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +25,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
@@ -203,12 +207,36 @@ class TopLevelNavState(
     }
 }
 
+fun TopLevelNavState.indexOfDestination(contentKey: Any?): Int {
+    if (contentKey == null) return -1
+    val keyStr = contentKey.toString()
+    return destinations.indexOfFirst { dest ->
+        contentKey == dest.route ||
+            keyStr == dest.route.toString() ||
+            keyStr.contains(dest.route::class.java.simpleName)
+    }
+}
+
 fun TopLevelNavState.isNavigationBetweenTopLevelDestinations(initialState: Scene<NavKey>, targetState: Scene<NavKey>): Boolean =
     topLevelContentKeys.run { contains(initialState.entries.lastOrNull()?.contentKey) && contains(targetState.entries.lastOrNull()?.contentKey) }
 
 internal fun TopLevelNavState.navigationTransition(initialState: Scene<NavKey>, targetState: Scene<NavKey>): ContentTransform {
     if (isNavigationBetweenTopLevelDestinations(initialState, targetState)) {
-        return fadeIn(tween(200, easing = LinearEasing)) togetherWith fadeOut(tween(200, easing = LinearEasing))
+        val fromIndex = indexOfDestination(initialState.entries.lastOrNull()?.contentKey)
+        val toIndex = indexOfDestination(targetState.entries.lastOrNull()?.contentKey)
+        val isForward = if (fromIndex != -1 && toIndex != -1) toIndex >= fromIndex else true
+
+        return (
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> if (isForward) fullWidth else -fullWidth },
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+            )
+        ) togetherWith (
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> if (isForward) -fullWidth else fullWidth },
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+            )
+        )
     }
 
     // Quick Back can select the pop spec while the animated scenes still describe the push.
@@ -311,6 +339,20 @@ fun NavigationView(
     isSelected: (TopLevelDestination) -> Boolean,
     onDestinationClick: (TopLevelDestination) -> Unit,
 ) {
+    val selectedIndex = destinations.indexOfFirst { isSelected(it) }.coerceAtLeast(0)
+    val tabWidth = 56.dp
+    val tabHeight = 48.dp
+    val spacing = 2.dp
+
+    val animatedOffset by animateDpAsState(
+        targetValue = (tabWidth + spacing) * selectedIndex,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioNoBouncy,
+        ),
+        label = "nav_pill_slide",
+    )
+
     Box(
         modifier = modifier
             .graphicsLayer(
@@ -321,26 +363,30 @@ fun NavigationView(
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(4.dp),
     ) {
+        // Sliding pill that smoothly follows the selected destination
+        Box(
+            modifier = Modifier
+                .offset(x = animatedOffset)
+                .size(width = tabWidth, height = tabHeight)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+        )
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing),
         ) {
-            destinations.forEach { destination ->
-                val selected = isSelected(destination)
-                val backgroundColor by androidx.compose.animation.animateColorAsState(
-                    targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                    animationSpec = tween(durationMillis = 150, easing = LinearEasing),
-                    label = "tab_bg",
-                )
+            destinations.forEachIndexed { index, destination ->
+                val selected = index == selectedIndex
                 val contentColor by androidx.compose.animation.animateColorAsState(
                     targetValue = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                    animationSpec = tween(durationMillis = 150, easing = LinearEasing),
-                    label = "tab_content",
+                    animationSpec = tween(durationMillis = 200, easing = LinearEasing),
+                    label = "tab_content_$index",
                 )
                 Box(
                     modifier = Modifier
+                        .size(width = tabWidth, height = tabHeight)
                         .clip(CircleShape)
-                        .background(backgroundColor)
                         .selectable(
                             selected = selected,
                             onClick = { onDestinationClick(destination) },
@@ -348,8 +394,7 @@ fun NavigationView(
                             indication = null,
                             interactionSource = null,
                         )
-                        .tvFocusRing(shape = RoundedCornerShape(99.dp))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .tvFocusRing(shape = RoundedCornerShape(99.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     CompositionLocalProvider(LocalContentColor provides contentColor) {

@@ -84,10 +84,11 @@ private fun applySubtitleStyle(
         subtitleView.setStyle(systemCaptionStyle)
     } else {
         val hasHindiText = cues?.any { it.text.containsDevanagari() } == true
-        val finalTypeface = if (hasHindiText) {
+        val usePoppins = hasHindiText || configuration.font == Font.POPPINS
+        val finalTypeface = if (usePoppins) {
             val poppins = ResourcesCompat.getFont(context, CoreUiR.font.poppins) ?: Typeface.SANS_SERIF
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                Typeface.create(poppins, if (configuration.textBold) 600 else 300, false)
+                Typeface.create(poppins, if (configuration.textBold) 700 else 400, false)
             } else {
                 Typeface.create(poppins, if (configuration.textBold) Typeface.BOLD else Typeface.NORMAL)
             }
@@ -128,7 +129,7 @@ private fun CharSequence?.containsDevanagari(): Boolean {
     if (this == null) return false
     for (i in 0 until length) {
         val code = this[i].code
-        if (code in 0x0900..0x097F) return true
+        if (code in 0x0900..0x097F || code in 0xA8E0..0xA8FF || code in 0x1CD0..0x1CFF) return true
     }
     return false
 }

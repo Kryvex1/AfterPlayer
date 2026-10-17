@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,12 +23,12 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -122,19 +123,20 @@ private fun FolderListItem(
         onClick = onClick,
         onLongClick = onLongClick,
         leadingContent = {
+            val formattedDuration = remember(folder.totalDuration) { Utils.formatDurationMillis(folder.totalDuration) }
             Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                 Icon(
-                    imageVector = ImageVector.vectorResource(id = R.drawable.folder_thumb),
-                    contentDescription = "",
+                    painter = painterResource(id = R.drawable.folder_thumb),
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier
-                        .width(min(90.dp, LocalConfiguration.current.screenWidthDp.dp * 0.3f))
+                        .width(88.dp)
                         .aspectRatio(20 / 17f),
                 )
 
                 if (preferences.showFolderDurationField) {
                     InfoChip(
-                        text = Utils.formatDurationMillis(folder.totalDuration),
+                        text = formattedDuration,
                         modifier = Modifier
                             .padding(5.dp)
                             .padding(bottom = 3.dp)
@@ -162,6 +164,7 @@ private fun FolderListItem(
             )
         },
         supportingContent = {
+            val formattedSize = remember(folder.totalSize) { Utils.formatFileSize(folder.totalSize) }
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -173,10 +176,10 @@ private fun FolderListItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                FlowRow(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (folder.videosCount > 0) {
                         InfoChip(
@@ -191,7 +194,7 @@ private fun FolderListItem(
                         )
                     }
                     if (preferences.showSizeField) {
-                        InfoChip(text = Utils.formatFileSize(folder.totalSize))
+                        InfoChip(text = formattedSize)
                     }
                 }
             }
@@ -213,7 +216,7 @@ private fun FolderGridItem(
     onLongClick: (() -> Unit)? = null,
 ) {
     NextSegmentedListItem(
-        modifier = modifier.width(IntrinsicSize.Min),
+        modifier = modifier,
         selected = selected,
         contentPadding = PaddingValues(8.dp),
         colors = ListItemDefaults.segmentedColors(
@@ -229,29 +232,30 @@ private fun FolderGridItem(
             },
             selectedContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
         ),
-        isFirstItem = isFirstItem,
-        isLastItem = isLastItem,
+        isFirstItem = false,
+        isLastItem = false,
         onClick = onClick,
         onLongClick = onLongClick,
         content = {
+            val formattedDuration = remember(folder.totalDuration) { Utils.formatDurationMillis(folder.totalDuration) }
             Column(
-                modifier = modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box {
                     Icon(
-                        imageVector = ImageVector.vectorResource(id = R.drawable.folder_thumb),
-                        contentDescription = "",
+                        painter = painterResource(id = R.drawable.folder_thumb),
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier
-                            .width(min(90.dp, LocalConfiguration.current.screenWidthDp.dp * 0.3f))
+                            .width(88.dp)
                             .aspectRatio(20 / 17f),
                     )
 
                     if (preferences.showFolderDurationField) {
                         InfoChip(
-                            text = Utils.formatDurationMillis(folder.totalDuration),
+                            text = formattedDuration,
                             modifier = Modifier
                                 .padding(5.dp)
                                 .padding(bottom = 3.dp)

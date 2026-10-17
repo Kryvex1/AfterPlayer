@@ -21,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -45,22 +47,29 @@ fun NextSegmentedListItem(
     interactionSource: MutableInteractionSource? = null,
 ) {
     val overrideShape = MaterialTheme.shapes.large
-
+    val isTv = LocalContext.current.isTelevision
     val focusInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
-    val isFocused by focusInteractionSource.collectIsFocusedAsState()
-    val focusScale by animateFloatAsState(targetValue = if (isFocused) 1.01f else 1f, label = "focusScale")
+    val isFocused by if (isTv) focusInteractionSource.collectIsFocusedAsState() else remember { androidx.compose.runtime.mutableStateOf(false) }
+    val focusScale by if (isTv) animateFloatAsState(targetValue = if (isFocused) 1.01f else 1f, label = "focusScale") else remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
 
     SegmentedListItem(
         modifier = modifier
-            .zIndex(if (isFocused) 1f else 0f)
-            .scale(focusScale)
             .then(
-                if (isFocused) {
-                    Modifier.border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = overrideShape,
-                    )
+                if (isTv) {
+                    Modifier
+                        .zIndex(if (isFocused) 1f else 0f)
+                        .scale(focusScale)
+                        .then(
+                            if (isFocused) {
+                                Modifier.border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = overrideShape,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        )
                 } else {
                     Modifier
                 },
