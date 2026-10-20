@@ -15,47 +15,16 @@ data class CustomFontConfig(
     val boldFontUri: String? = null,
 ) {
     fun resolveFontFamily(context: Context): FontFamily {
-        val regularFile = regularFontUri?.let { getCachedFontFile(context, it) }
-        val boldFile = boldFontUri?.let { getCachedFontFile(context, it) }
-
-        return when {
-            // Case 1: Both Regular and Bold fonts are provided
-            regularFile != null && boldFile != null -> {
-                FontFamily(
-                    Font(file = regularFile, weight = FontWeight.Normal),
-                    Font(file = boldFile, weight = FontWeight.Bold),
-                )
-            }
-            // Case 2: Only Regular is provided -> Use for both weights
-            regularFile != null -> {
-                FontFamily(
-                    Font(file = regularFile, weight = FontWeight.Normal),
-                    Font(file = regularFile, weight = FontWeight.Bold),
-                )
-            }
-            // Case 3: Only Bold is provided -> Use for both weights
-            boldFile != null -> {
-                FontFamily(
-                    Font(file = boldFile, weight = FontWeight.Normal),
-                    Font(file = boldFile, weight = FontWeight.Bold),
-                )
-            }
-            // Case 4: No custom font -> Default to SF Pro
-            else -> SFProFontFamily
-        }
+        return SFProMediumFontFamily
     }
 
     companion object {
-        fun resolveHindiFontFamily(context: Context, customHindiFontUri: String?): FontFamily {
-            val hindiFile = customHindiFontUri?.let { getCachedFontFile(context, it) }
-            return if (hindiFile != null) {
-                FontFamily(
-                    Font(file = hindiFile, weight = FontWeight.Normal),
-                    Font(file = hindiFile, weight = FontWeight.Bold),
-                )
-            } else {
-                PoppinsFontFamily
-            }
+        fun resolveHindiFontFamily(context: Context, customHindiFontUri: String? = null): FontFamily {
+            return KohinoorDevanagariFontFamily
+        }
+
+        fun resolveEnglishFontFamily(isBold: Boolean = false): FontFamily {
+            return if (isBold) SFProBoldFontFamily else SFProMediumFontFamily
         }
 
         fun getCachedFontFile(context: Context, uriString: String): File? {

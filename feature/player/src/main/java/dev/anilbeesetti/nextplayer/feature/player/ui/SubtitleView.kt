@@ -8,6 +8,9 @@ import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -48,8 +51,9 @@ import dev.anilbeesetti.nextplayer.core.model.Font
 import dev.anilbeesetti.nextplayer.core.model.SubtitleAnimation
 import dev.anilbeesetti.nextplayer.core.ui.R as CoreUiR
 import dev.anilbeesetti.nextplayer.core.ui.theme.CustomFontConfig
-import dev.anilbeesetti.nextplayer.core.ui.theme.PoppinsFontFamily
-import dev.anilbeesetti.nextplayer.core.ui.theme.SFProFontFamily
+import dev.anilbeesetti.nextplayer.core.ui.theme.KohinoorDevanagariFontFamily
+import dev.anilbeesetti.nextplayer.core.ui.theme.SFProBoldFontFamily
+import dev.anilbeesetti.nextplayer.core.ui.theme.SFProMediumFontFamily
 import dev.anilbeesetti.nextplayer.feature.player.extensions.toTypeface
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberCuesState
 import kotlinx.coroutines.delay
@@ -65,12 +69,18 @@ fun SubtitleView(
     val cuesState = rememberCuesState(player)
     val cues = cuesState.currentCues?.cues
 
+    val paddingFraction = if (configuration.controlsVisible && !isInPictureInPictureMode) {
+        (configuration.bottomPadding.toFloat() + 96f) / 400f
+    } else {
+        configuration.bottomPadding.toFloat() / 400f
+    }
+
     if (configuration.useSystemCaptionStyle) {
         AndroidView(
             modifier = modifier.fillMaxSize(),
             factory = { context ->
                 Media3SubtitleView(context).apply {
-                    setBottomPaddingFraction(configuration.bottomPadding.toFloat() / 400f)
+                    setBottomPaddingFraction(paddingFraction)
                     applySystemSubtitleStyle(
                         context = context,
                         subtitleView = this,
@@ -80,7 +90,7 @@ fun SubtitleView(
             },
             update = { subtitleView ->
                 subtitleView.setCues(cues)
-                subtitleView.setBottomPaddingFraction(configuration.bottomPadding.toFloat() / 400f)
+                subtitleView.setBottomPaddingFraction(paddingFraction)
                 applySystemSubtitleStyle(
                     context = subtitleView.context,
                     subtitleView = subtitleView,
@@ -136,26 +146,13 @@ private fun ComposeSubtitleRenderer(
 
     val containsDevanagari = remember(rawText) { rawText.containsDevanagari() }
     val resolvedFontFamily = remember(
-        configuration.font,
-        configuration.customRegularFontUri,
-        configuration.customBoldFontUri,
-        configuration.customHindiFontUri,
         containsDevanagari,
+        configuration.textBold,
     ) {
-        if (containsDevanagari || configuration.font == Font.POPPINS) {
-            CustomFontConfig.resolveHindiFontFamily(context, configuration.customHindiFontUri)
-        } else if (configuration.font == Font.DEFAULT) {
-            CustomFontConfig(
-                regularFontUri = configuration.customRegularFontUri,
-                boldFontUri = configuration.customBoldFontUri,
-            ).resolveFontFamily(context)
+        if (containsDevanagari) {
+            KohinoorDevanagariFontFamily
         } else {
-            when (configuration.font) {
-                Font.MONOSPACE -> androidx.compose.ui.text.font.FontFamily.Monospace
-                Font.SANS_SERIF -> androidx.compose.ui.text.font.FontFamily.SansSerif
-                Font.SERIF -> androidx.compose.ui.text.font.FontFamily.Serif
-                else -> SFProFontFamily
-            }
+            if (configuration.textBold) SFProBoldFontFamily else SFProMediumFontFamily
         }
     }
 
@@ -180,10 +177,22 @@ private fun ComposeSubtitleRenderer(
         rawText
     }
 
+    val targetBottomPadding = if (configuration.controlsVisible && !isInPictureInPictureMode) {
+        (configuration.bottomPadding + 116).dp
+    } else {
+        configuration.bottomPadding.dp
+    }
+
+    val animatedBottomPadding by animateDpAsState(
+        targetValue = targetBottomPadding,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "subtitle_bottom_padding",
+    )
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(bottom = configuration.bottomPadding.dp),
+            .padding(bottom = animatedBottomPadding),
         contentAlignment = Alignment.BottomCenter,
     ) {
         if (configuration.animation == SubtitleAnimation.FADE) {
@@ -280,4 +289,5 @@ data class SubtitleConfiguration(
     val customHindiFontUri: String? = null,
     val animation: SubtitleAnimation = SubtitleAnimation.NONE,
     val bottomPadding: Int = 16,
+    val controlsVisible: Boolean = false,
 )

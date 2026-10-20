@@ -48,6 +48,7 @@ fun ControlsTopView(
     modifier: Modifier = Modifier,
     title: String,
     videoDecoderMode: DecoderMode?,
+    videoQualityBadge: String? = null,
     onBackClick: () -> Unit = {},
     onDecoderClick: () -> Unit = {},
     onAudioClick: () -> Unit = {},
@@ -79,12 +80,7 @@ fun ControlsTopView(
                 contentDescription = null,
             )
         }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(lineBreak = LineBreak.Heading),
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Row(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(8.dp))
@@ -93,7 +89,31 @@ fun ControlsTopView(
                     onClick = onTitleClick,
                 )
                 .padding(horizontal = 6.dp, vertical = 4.dp),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(lineBreak = LineBreak.Heading),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (!videoQualityBadge.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ) {
+                    Text(
+                        text = videoQualityBadge,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,

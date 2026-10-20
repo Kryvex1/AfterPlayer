@@ -4,8 +4,12 @@ import android.content.Context
 import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -112,8 +116,20 @@ fun InAppMiniPlayer(
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically { it } + fadeIn(),
-        exit = slideOutVertically { it } + fadeOut(),
+        enter = slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        ) + scaleIn(
+            initialScale = 0.88f,
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        ) + fadeIn(tween(durationMillis = 250)),
+        exit = slideOutVertically(
+            targetOffsetY = { it },
+            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        ) + scaleOut(
+            targetScale = 0.88f,
+            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        ) + fadeOut(tween(durationMillis = 200)),
         modifier = modifier,
     ) {
         Card(
@@ -121,15 +137,18 @@ fun InAppMiniPlayer(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .fillMaxWidth()
                 .widthIn(max = 500.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .clickable {
                     val intent = Intent(context, PlayerActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                         data = currentItem?.localConfiguration?.uri
                     }
                     context.startActivity(intent)
+                    if (context is android.app.Activity) {
+                        context.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                    }
                 },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.96f),
             ),

@@ -156,6 +156,7 @@ class PlayerActivity : ComponentActivity() {
         playInBackground = {
             playInBackground = true
             finish()
+            overridePendingTransition(0, android.R.anim.fade_out)
         },
         setVideoDecoderMode = { mode ->
             lifecycleScope.launch { mediaController?.setVideoDecoderMode(mode) }
@@ -359,6 +360,7 @@ class PlayerActivity : ComponentActivity() {
             setResult(RESULT_OK, result)
         }
         super.finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     override fun onNewIntent(intent: Intent) {

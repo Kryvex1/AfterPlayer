@@ -47,17 +47,11 @@ fun BoxScope.MediaDetailsView(
     val durationMs = remember(player.duration) { player.duration.coerceAtLeast(0L) }
     val durationFormatted = remember(durationMs) { durationMs.milliseconds.formatted() }
     val videoSize = player.videoSize
-    val resolutionLabel = remember(videoSize) {
-        val h = videoSize.height
-        when {
-            h >= 2160 -> "4K UHD"
-            h >= 1440 -> "2K QHD"
-            h >= 1080 -> "1080p Full HD"
-            h >= 720 -> "720p HD"
-            h > 0 -> "${h}p"
-            else -> null
-        }
+    val realHeight = remember(player.videoFormat, videoSize) {
+        val h = player.videoFormat?.height ?: videoSize.height
+        if (h > 0) "${h}p" else null
     }
+    val resolutionLabel = realHeight
     val uriString = remember(player.currentMediaItem) {
         player.currentMediaItem?.localConfiguration?.uri?.path
             ?: player.currentMediaItem?.localConfiguration?.uri?.toString()

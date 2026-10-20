@@ -24,8 +24,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
@@ -44,6 +48,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -114,6 +119,66 @@ private fun AboutPreferencesScreenContent(
                 onTelegramUserClick = { openTelegram(context, TELEGRAM_USER) },
                 onTelegramChannelClick = { openTelegram(context, TELEGRAM_CHANNEL) },
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            ListSectionTitle(text = "Support Development")
+
+            Card(
+                onClick = { launchUpiPayment(context) },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_kofi),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Buy Me a Coffee",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Support development via UPI (GPay, PhonePe, Paytm)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                        )
+                    }
+
+                    Icon(
+                        painter = painterResource(R.drawable.ic_upi),
+                        contentDescription = "UPI",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -335,5 +400,16 @@ internal fun androidx.compose.ui.platform.UriHandler.openUriOrShowToast(uri: Str
         openUri(uri = uri)
     } catch (_: Exception) {
         Toast.makeText(context, context.getString(R.string.error_opening_link), Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun launchUpiPayment(context: Context) {
+    val upiUri = Uri.parse("upi://pay?pa=notumang@fam&pn=Umang&cu=INR&tn=Support+NextPlayer+Development")
+    val upiIntent = Intent(Intent.ACTION_VIEW, upiUri)
+    val chooser = Intent.createChooser(upiIntent, "Support Development via UPI")
+    try {
+        context.startActivity(chooser)
+    } catch (_: Exception) {
+        Toast.makeText(context, "No UPI app found on device", Toast.LENGTH_SHORT).show()
     }
 }

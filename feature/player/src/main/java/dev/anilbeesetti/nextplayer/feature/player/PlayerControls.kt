@@ -52,6 +52,11 @@ fun PlayerControls(
     modifier: Modifier = Modifier,
     middleControlsModifier: Modifier = Modifier,
 ) {
+    val videoQualityBadge = remember(player.videoFormat, player.videoSize) {
+        val h = player.videoFormat?.height ?: player.videoSize.height
+        if (h > 0) "${h}p" else null
+    }
+
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -65,6 +70,7 @@ fun PlayerControls(
                 ControlsTopView(
                     title = title,
                     videoDecoderMode = videoDecoderMode,
+                    videoQualityBadge = videoQualityBadge,
                     onTitleClick = { onShowOverlay(OverlayView.MEDIA_DETAILS) },
                     onDecoderClick = { onShowOverlay(OverlayView.DECODER_SELECTOR) },
                     onAudioClick = { onShowOverlay(OverlayView.AUDIO_SELECTOR) },

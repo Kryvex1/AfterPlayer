@@ -5,9 +5,13 @@ import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -123,6 +127,28 @@ internal fun MediaPlayerContent(
         enablePanGesture = playerPreferences.enablePanGesture,
         onEvent = { onAction(PlayerAction.OnVideoZoomEvent(it)) },
     )
+    var isMinimizing by remember { mutableStateOf(false) }
+    val minimizeScale by animateFloatAsState(
+        targetValue = if (isMinimizing) 0.38f else 1f,
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+        label = "minimize_scale",
+    )
+    val minimizeAlpha by animateFloatAsState(
+        targetValue = if (isMinimizing) 0f else 1f,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "minimize_alpha",
+    )
+    val minimizeOffsetY by animateDpAsState(
+        targetValue = if (isMinimizing) 420.dp else 0.dp,
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+        label = "minimize_offset_y",
+        finishedListener = {
+            if (isMinimizing) {
+                onAction(PlayerAction.PlayInBackground)
+            }
+        },
+    )
+
     val brightnessState = if (!isPreview) rememberBrightnessState() else null
     val volumeAndBrightnessGestureState = if (volumeState != null && brightnessState != null) {
         rememberVolumeAndBrightnessGestureState(
@@ -132,7 +158,11 @@ internal fun MediaPlayerContent(
             enableBrightnessGesture = playerPreferences.enableBrightnessSwipeGesture,
             volumeGestureSensitivity = playerPreferences.volumeGestureSensitivity,
             brightnessGestureSensitivity = playerPreferences.brightnessGestureSensitivity,
-            onMinimize = { onAction(PlayerAction.PlayInBackground) },
+            onMinimize = {
+                if (!isMinimizing) {
+                    isMinimizing = true
+                }
+            },
         )
     } else {
         null
@@ -174,7 +204,18 @@ internal fun MediaPlayerContent(
         label = "video_shrink_padding",
     )
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                scaleX = minimizeScale
+                scaleY = minimizeScale
+                alpha = minimizeAlpha
+                translationY = minimizeOffsetY.toPx()
+            }
+            .clip(RoundedCornerShape((if (isMinimizing) 14 else 0).dp))
+            .background(Color.Black),
+    ) {
         if (pictureInPictureState != null) {
             Box(
                 modifier = Modifier
@@ -197,6 +238,7 @@ internal fun MediaPlayerContent(
                         customHindiFontUri = playerPreferences.customHindiFontUri,
                         animation = playerPreferences.subtitleAnimation,
                         bottomPadding = playerPreferences.subtitleBottomPadding,
+                        controlsVisible = controlsVisibilityState.controlsVisible,
                     ),
                 )
                 if (volumeAndBrightnessGestureState != null) {
