@@ -79,7 +79,9 @@ import dev.anilbeesetti.nextplayer.navigation.navigationTransition
 import dev.anilbeesetti.nextplayer.navigation.networkNavGraph
 import dev.anilbeesetti.nextplayer.navigation.playlistNavGraph
 import dev.anilbeesetti.nextplayer.navigation.rememberTopLevelNavState
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberMediaController
 import dev.anilbeesetti.nextplayer.navigation.settingsNavGraph
+import dev.anilbeesetti.nextplayer.ui.InAppMiniPlayer
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -211,6 +213,8 @@ fun NavigationLayout(
         selectedFabState?.let { displayedFabState = it }
     }
 
+    val mediaController = rememberMediaController()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = modifier,
@@ -271,6 +275,12 @@ fun NavigationLayout(
                 modifier = Modifier.onSizeChanged { railWidth = with(density) { it.width.toDp() } },
             )
         }
+        InAppMiniPlayer(
+            controller = mediaController,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = if (showNavigation && showBottomBar && !showNavRail) 84.dp else 16.dp),
+        )
     }
 }
 

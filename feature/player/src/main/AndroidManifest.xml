@@ -755,6 +755,11 @@
                 <action android:name="androidx.media3.session.MediaSessionService"/>
             </intent-filter>
         </service>
+
+        <provider
+            android:name=".service.CarConnectionProvider"
+            android:authorities="androidx.car.app.connection"
+            android:exported="false" />
     </application>
 
 </manifest>

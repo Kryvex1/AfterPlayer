@@ -54,14 +54,10 @@ android {
         }
 
         getByName("debug") {
-            isDebuggable = false
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("debug")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-            )
         }
     }
 
@@ -138,6 +134,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtimeCompose)
+
+    implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media3.session)
 
     implementation(libs.google.android.material)
     implementation(libs.androidx.core.splashscreen)

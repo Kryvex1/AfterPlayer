@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.anilbeesetti.nextplayer.core.data.repository.PreferencesRepository
 import dev.anilbeesetti.nextplayer.core.model.Font
 import dev.anilbeesetti.nextplayer.core.model.PlayerPreferences
+import dev.anilbeesetti.nextplayer.core.model.SubtitleAnimation
 import dev.anilbeesetti.nextplayer.core.ui.base.MviViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +55,11 @@ class SubtitlePreferencesViewModel(
             is SubtitlePreferencesUiEvent.ToggleApplyEmbeddedStyles -> toggleApplyEmbeddedStyles()
             is SubtitlePreferencesUiEvent.UpdateSubtitleEncoding -> updateSubtitleEncoding(action.value)
             is SubtitlePreferencesUiEvent.ToggleUseSystemCaptionStyle -> toggleUseSystemCaptionStyle()
+            is SubtitlePreferencesUiEvent.UpdateCustomRegularFont -> updateCustomRegularFont(action.uri)
+            is SubtitlePreferencesUiEvent.UpdateCustomBoldFont -> updateCustomBoldFont(action.uri)
+            is SubtitlePreferencesUiEvent.UpdateCustomHindiFont -> updateCustomHindiFont(action.uri)
+            is SubtitlePreferencesUiEvent.UpdateSubtitleAnimation -> updateSubtitleAnimation(action.animation)
+            is SubtitlePreferencesUiEvent.UpdateSubtitleBottomPadding -> updateSubtitleBottomPadding(action.padding)
         }
     }
 
@@ -122,6 +128,36 @@ class SubtitlePreferencesViewModel(
             preferencesRepository.updatePlayerPreferences { it.copy(useSystemCaptionStyle = !it.useSystemCaptionStyle) }
         }
     }
+
+    private fun updateCustomRegularFont(uri: String?) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(customRegularFontUri = uri) }
+        }
+    }
+
+    private fun updateCustomBoldFont(uri: String?) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(customBoldFontUri = uri) }
+        }
+    }
+
+    private fun updateCustomHindiFont(uri: String?) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(customHindiFontUri = uri) }
+        }
+    }
+
+    private fun updateSubtitleAnimation(animation: SubtitleAnimation) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(subtitleAnimation = animation) }
+        }
+    }
+
+    private fun updateSubtitleBottomPadding(padding: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences { it.copy(subtitleBottomPadding = padding) }
+        }
+    }
 }
 
 @Stable
@@ -134,6 +170,7 @@ sealed interface SubtitlePreferenceDialog {
     data object SubtitleLanguageDialog : SubtitlePreferenceDialog
     data object SubtitleFontDialog : SubtitlePreferenceDialog
     data object SubtitleEncodingDialog : SubtitlePreferenceDialog
+    data object SubtitleAnimationDialog : SubtitlePreferenceDialog
 }
 
 sealed interface SubtitlePreferencesUiEvent {
@@ -148,4 +185,9 @@ sealed interface SubtitlePreferencesUiEvent {
     data object ToggleApplyEmbeddedStyles : SubtitlePreferencesUiEvent
     data class UpdateSubtitleEncoding(val value: String) : SubtitlePreferencesUiEvent
     data object ToggleUseSystemCaptionStyle : SubtitlePreferencesUiEvent
+    data class UpdateCustomRegularFont(val uri: String?) : SubtitlePreferencesUiEvent
+    data class UpdateCustomBoldFont(val uri: String?) : SubtitlePreferencesUiEvent
+    data class UpdateCustomHindiFont(val uri: String?) : SubtitlePreferencesUiEvent
+    data class UpdateSubtitleAnimation(val animation: SubtitleAnimation) : SubtitlePreferencesUiEvent
+    data class UpdateSubtitleBottomPadding(val padding: Int) : SubtitlePreferencesUiEvent
 }

@@ -55,7 +55,13 @@ data class PlayerPreferences(
     val subtitleBackground: Boolean = false,
     val subtitleFont: Font = Font.DEFAULT,
     val subtitleTextBold: Boolean = true,
+    val subtitleBold: Boolean = false,
     val applyEmbeddedStyles: Boolean = true,
+    val customRegularFontUri: String? = null,
+    val customBoldFontUri: String? = null,
+    val customHindiFontUri: String? = null,
+    val subtitleAnimation: SubtitleAnimation = SubtitleAnimation.NONE,
+    val subtitleBottomPadding: Int = DEFAULT_SUBTITLE_BOTTOM_PADDING,
 ) {
 
     companion object {
@@ -64,6 +70,7 @@ data class PlayerPreferences(
         const val DEFAULT_VOLUME_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_BRIGHTNESS_GESTURE_SENSITIVITY = 0.50f
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 16
+        const val DEFAULT_SUBTITLE_BOTTOM_PADDING = 16
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
     }
 }

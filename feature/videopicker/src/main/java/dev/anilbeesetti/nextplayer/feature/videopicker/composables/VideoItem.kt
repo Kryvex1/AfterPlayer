@@ -307,6 +307,18 @@ private fun ThumbnailView(
             )
         }
 
+        if (preferences.showResolutionField && video.height > 0) {
+            InfoChip(
+                text = "${video.height}p",
+                modifier = Modifier
+                    .padding(5.dp)
+                    .align(Alignment.BottomStart),
+                backgroundColor = Color.Black.copy(alpha = 0.6f),
+                contentColor = Color.White,
+                shape = MaterialTheme.shapes.extraSmall,
+            )
+        }
+
         if (isNew) {
             InfoChip(
                 text = stringResource(R.string.new_label),

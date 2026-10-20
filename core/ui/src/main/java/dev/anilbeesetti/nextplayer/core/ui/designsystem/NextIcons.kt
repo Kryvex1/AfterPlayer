@@ -64,6 +64,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PanToolAlt
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Pinch
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -140,6 +141,7 @@ object NextIcons {
     val Pip = Icons.Rounded.PictureInPictureAlt
     val Pinch = Icons.Rounded.Pinch
     val Play = Icons.Rounded.PlayArrow
+    val Pause = Icons.Rounded.Pause
     val Player = Icons.Rounded.PlayCircle
     val Playlist = Icons.AutoMirrored.Rounded.PlaylistPlay
     val PlaylistAdd = Icons.AutoMirrored.Rounded.PlaylistAdd

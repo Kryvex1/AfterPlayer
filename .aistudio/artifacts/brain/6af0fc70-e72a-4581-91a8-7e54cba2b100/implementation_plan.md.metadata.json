@@ -1,6 +1,0 @@
-{
-  "summary": "Implementation plan for smooth bottom navigation tab swipe transitions, eliminating black screen glitch, optimizing folder scrolling performance, adding Poppins font for Devanagari numerals and Hindi subtitles with dynamic settings sync, and redesigning player side sheets (Audio, Subtitles, Chapters) with auto-dismiss on selection and outside taps.",
-  "updatedAt": "2026-10-16T18:48:06.493330919Z",
-  "requestFeedback": true,
-  "userFacing": true
-}

@@ -551,4 +551,23 @@
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
+    <string name="font_source">Font Source</string>
+    <string name="font_source_default">SF Pro (Default)</string>
+    <string name="font_source_custom">Custom Font</string>
+    <string name="custom_regular_font">Regular / Light Font</string>
+    <string name="custom_regular_font_desc">Select .ttf or .otf file for regular text</string>
+    <string name="custom_bold_font">Bold Font</string>
+    <string name="custom_bold_font_desc">Select .ttf or .otf file for bold text</string>
+    <string name="custom_font_single_file_notice">अगर आप केवल एक फ़ॉन्ट फ़ाइल चुनते हैं, तो वह लाइट और बोल्ड दोनों जगह काम करेगी।</string>
+    <string name="hindi_font">Hindi / Devanagari Font</string>
+    <string name="hindi_font_desc">Defaults to Poppins (or select custom font)</string>
+    <string name="font_preview">Live Font Preview</string>
+    <string name="clear_font">Clear</string>
+    <string name="subtitle_animation">Subtitle Animation</string>
+    <string name="subtitle_animation_none">None</string>
+    <string name="subtitle_animation_fade">Fade</string>
+    <string name="subtitle_animation_typewriter">Typewriter</string>
+    <string name="subtitle_bottom_padding">Subtitle Bottom Margin</string>
+    <string name="mini_player">Mini Player</string>
+    <string name="dismiss">Dismiss</string>
 </resources>

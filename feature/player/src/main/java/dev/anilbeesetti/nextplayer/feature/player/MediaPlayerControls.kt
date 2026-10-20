@@ -129,7 +129,7 @@ internal fun MediaPlayerControls(
                         .background(Color.Black.copy(alpha = 0.3f)),
                 )
             }
-            if (mediaPresentationState.isBuffering) {
+            if (mediaPresentationState.isBuffering && !seekGestureState.isSeeking && !keyInputState.isSeeking) {
                 CircularProgressIndicator(
                     Modifier
                         .align(Alignment.Center)

@@ -132,6 +132,7 @@ internal fun MediaPlayerContent(
             enableBrightnessGesture = playerPreferences.enableBrightnessSwipeGesture,
             volumeGestureSensitivity = playerPreferences.volumeGestureSensitivity,
             brightnessGestureSensitivity = playerPreferences.brightnessGestureSensitivity,
+            onMinimize = { onAction(PlayerAction.PlayInBackground) },
         )
     } else {
         null
@@ -189,8 +190,13 @@ internal fun MediaPlayerContent(
                         showBackground = playerPreferences.subtitleBackground,
                         font = playerPreferences.subtitleFont,
                         textSize = playerPreferences.subtitleTextSize,
-                        textBold = playerPreferences.subtitleTextBold,
+                        textBold = playerPreferences.subtitleTextBold || playerPreferences.subtitleBold,
                         applyEmbeddedStyles = playerPreferences.applyEmbeddedStyles,
+                        customRegularFontUri = playerPreferences.customRegularFontUri,
+                        customBoldFontUri = playerPreferences.customBoldFontUri,
+                        customHindiFontUri = playerPreferences.customHindiFontUri,
+                        animation = playerPreferences.subtitleAnimation,
+                        bottomPadding = playerPreferences.subtitleBottomPadding,
                     ),
                 )
                 if (volumeAndBrightnessGestureState != null) {
