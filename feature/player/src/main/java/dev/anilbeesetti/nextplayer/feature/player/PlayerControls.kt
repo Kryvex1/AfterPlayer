@@ -29,6 +29,7 @@ import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import dev.anilbeesetti.nextplayer.feature.player.ui.controls.ControlsBottomView
 import dev.anilbeesetti.nextplayer.feature.player.ui.controls.ControlsMiddleView
 import dev.anilbeesetti.nextplayer.feature.player.ui.controls.ControlsTopView
+import androidx.compose.runtime.remember
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderMode
 
 @OptIn(UnstableApi::class)
@@ -52,8 +53,8 @@ fun PlayerControls(
     modifier: Modifier = Modifier,
     middleControlsModifier: Modifier = Modifier,
 ) {
-    val videoQualityBadge = remember(player.videoFormat, player.videoSize) {
-        val h = player.videoFormat?.height ?: player.videoSize.height
+    val videoQualityBadge = remember(player?.videoSize) {
+        val h = player?.videoSize?.height ?: 0
         if (h > 0) "${h}p" else null
     }
 

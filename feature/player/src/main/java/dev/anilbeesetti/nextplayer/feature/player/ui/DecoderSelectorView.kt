@@ -56,9 +56,9 @@ fun BoxScope.DecoderSelectorView(
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             DecoderTrackTypeSelector(
                 selectedTrackType = selectedTrackType,

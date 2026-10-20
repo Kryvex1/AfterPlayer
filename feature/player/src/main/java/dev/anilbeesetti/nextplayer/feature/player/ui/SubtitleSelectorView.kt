@@ -71,8 +71,8 @@ fun BoxScope.SubtitleSelectorView(
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp)
-                .padding(horizontal = 24.dp)
+                .padding(bottom = 12.dp)
+                .padding(horizontal = 20.dp)
                 .selectableGroup(),
         ) {
             subtitleTracksState.tracks.forEachIndexed { index, track ->

@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
+import dev.anilbeesetti.nextplayer.feature.player.extensions.noRippleClickable
 import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -249,6 +250,16 @@ internal fun MediaPlayerContent(
                         seekGestureState = seekGestureState,
                         videoZoomAndContentScaleState = videoZoomAndContentScaleState,
                         volumeAndBrightnessGestureState = volumeAndBrightnessGestureState,
+                    )
+                }
+                if (overlayView != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .noRippleClickable {
+                                overlayView = null
+                                controlsVisibilityState.hideControls()
+                            },
                     )
                 }
             }

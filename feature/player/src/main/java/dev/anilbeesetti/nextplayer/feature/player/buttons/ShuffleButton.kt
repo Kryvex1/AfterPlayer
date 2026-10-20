@@ -33,6 +33,7 @@ fun ShuffleButton(
         Icon(
             painter = shuffleModeIconPainter(state.shuffleOn),
             contentDescription = shuffleContentDescription(state.shuffleOn),
+            tint = androidx.compose.ui.graphics.Color.White,
         )
     }
 }

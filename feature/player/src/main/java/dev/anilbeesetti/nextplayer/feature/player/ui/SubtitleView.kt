@@ -6,6 +6,7 @@ import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -75,47 +76,54 @@ fun SubtitleView(
         configuration.bottomPadding.toFloat() / 400f
     }
 
-    if (configuration.useSystemCaptionStyle) {
-        AndroidView(
-            modifier = modifier.fillMaxSize(),
-            factory = { context ->
-                Media3SubtitleView(context).apply {
-                    setBottomPaddingFraction(paddingFraction)
+    AnimatedVisibility(
+        visible = !configuration.controlsVisible || isInPictureInPictureMode,
+        enter = fadeIn(tween(200)),
+        exit = fadeOut(tween(200)),
+        modifier = modifier,
+    ) {
+        if (configuration.useSystemCaptionStyle) {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    Media3SubtitleView(context).apply {
+                        setBottomPaddingFraction(paddingFraction)
+                        applySystemSubtitleStyle(
+                            context = context,
+                            subtitleView = this,
+                            configuration = configuration,
+                        )
+                    }
+                },
+                update = { subtitleView ->
+                    subtitleView.setCues(cues)
+                    subtitleView.setBottomPaddingFraction(paddingFraction)
                     applySystemSubtitleStyle(
-                        context = context,
-                        subtitleView = this,
+                        context = subtitleView.context,
+                        subtitleView = subtitleView,
                         configuration = configuration,
                     )
-                }
-            },
-            update = { subtitleView ->
-                subtitleView.setCues(cues)
-                subtitleView.setBottomPaddingFraction(paddingFraction)
-                applySystemSubtitleStyle(
-                    context = subtitleView.context,
-                    subtitleView = subtitleView,
-                    configuration = configuration,
-                )
-                if (isInPictureInPictureMode) {
-                    subtitleView.setFractionalTextSize(Media3SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 0.75f)
-                } else {
-                    val isPortrait = subtitleView.context.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-                    val targetSize = if (isPortrait) {
-                        (configuration.textSize.toFloat() * 0.85f).coerceAtLeast(8f)
+                    if (isInPictureInPictureMode) {
+                        subtitleView.setFractionalTextSize(Media3SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 0.75f)
                     } else {
-                        configuration.textSize.toFloat()
+                        val isPortrait = subtitleView.context.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+                        val targetSize = if (isPortrait) {
+                            (configuration.textSize.toFloat() * 0.85f).coerceAtLeast(8f)
+                        } else {
+                            configuration.textSize.toFloat()
+                        }
+                        subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, targetSize)
                     }
-                    subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, targetSize)
-                }
-            },
-        )
-    } else {
-        ComposeSubtitleRenderer(
-            modifier = modifier,
-            cues = cues,
-            isInPictureInPictureMode = isInPictureInPictureMode,
-            configuration = configuration,
-        )
+                },
+            )
+        } else {
+            ComposeSubtitleRenderer(
+                modifier = Modifier,
+                cues = cues,
+                isInPictureInPictureMode = isInPictureInPictureMode,
+                configuration = configuration,
+            )
+        }
     }
 }
 

@@ -1,6 +1,8 @@
 package dev.anilbeesetti.nextplayer.feature.player.buttons
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -11,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
@@ -21,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -35,7 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.time.Duration.Companion.milliseconds
 
-val PlayerButtonBlackAlpha = Color.Black.copy(alpha = 0.3f)
+val PlayerButtonBlackAlpha = Color.Black.copy(alpha = 0.40f)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -44,7 +46,7 @@ fun PlayerButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
-    containerColor: Color = Color.Transparent,
+    containerColor: Color = Color.Unspecified,
     contentPadding: PaddingValues = PaddingValues(8.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -77,46 +79,73 @@ fun PlayerButton(
         }
     }
 
-    val colors = if (LocalUseMaterialYouControls.current) {
-        IconButtonDefaults.filledTonalIconButtonColors()
+    val rippleConfiguration = RippleConfiguration(
+        color = Color.White,
+        rippleAlpha = RippleAlpha(
+            pressedAlpha = 0.5f,
+            focusedAlpha = 0.5f,
+            draggedAlpha = 0.5f,
+            hoveredAlpha = 0.5f,
+        ),
+    )
+
+    val isMaterialYou = LocalUseMaterialYouControls.current
+    val showBackground = if (!isMaterialYou) {
+        false
+    } else if (containerColor != Color.Unspecified) {
+        containerColor != Color.Transparent
     } else {
-        IconButtonDefaults.iconButtonColors(
-            contentColor = Color.White,
-            containerColor = containerColor,
-        )
+        true
     }
 
-    val rippleConfiguration = if (LocalUseMaterialYouControls.current) {
-        LocalRippleConfiguration.current
+    val bgTint = if (containerColor != Color.Unspecified && containerColor != Color.Transparent) {
+        containerColor
     } else {
-        RippleConfiguration(
-            color = Color.White,
-            rippleAlpha = RippleAlpha(
-                pressedAlpha = 0.5f,
-                focusedAlpha = 0.5f,
-                draggedAlpha = 0.5f,
-                hoveredAlpha = 0.5f
-            )
-        )
+        Color.Black.copy(alpha = 0.45f)
     }
+    val effectiveBgColor = if (enabled) bgTint else bgTint.copy(alpha = 0.15f)
 
     CompositionLocalProvider(
-        LocalContentColor provides if (enabled) colors.contentColor else colors.disabledContentColor,
-        LocalRippleConfiguration provides rippleConfiguration
+        LocalContentColor provides Color.White,
+        LocalRippleConfiguration provides rippleConfiguration,
     ) {
         Box(
             modifier = modifier
                 .clip(CircleShape)
-                .background(if (enabled) colors.containerColor else colors.disabledContainerColor)
+                .then(
+                    if (showBackground) {
+                        Modifier.border(
+                            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.20f)),
+                            shape = CircleShape,
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
                 .clickable(
                     interactionSource = interactionSource,
                     enabled = enabled,
                     onClick = {},
                 )
-                .padding(contentPadding)
                 .tvFocusRing(isTv),
             contentAlignment = Alignment.Center,
-            content = content
-        )
+        ) {
+            // Background layer (frosted circular effect when Material You controls = ON)
+            if (showBackground) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(CircleShape)
+                        .background(color = effectiveBgColor, shape = CircleShape),
+                )
+            }
+
+            // Foreground content layer: sharp, crisp, 100% white, zero blur
+            Box(
+                modifier = Modifier.padding(contentPadding),
+                contentAlignment = Alignment.Center,
+                content = content,
+            )
+        }
     }
 }

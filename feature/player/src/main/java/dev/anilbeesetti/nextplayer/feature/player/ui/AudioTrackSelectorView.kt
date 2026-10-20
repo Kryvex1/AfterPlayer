@@ -60,8 +60,8 @@ fun BoxScope.AudioTrackSelectorView(
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp)
-                .padding(horizontal = 24.dp)
+                .padding(bottom = 12.dp)
+                .padding(horizontal = 20.dp)
                 .selectableGroup(),
         ) {
             audioTracksState.tracks.forEachIndexed { index, track ->

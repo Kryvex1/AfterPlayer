@@ -38,6 +38,7 @@ fun PlayPauseButton(
             painter = icon,
             contentDescription = contentDescription,
             modifier = Modifier.size(48.dp),
+            tint = androidx.compose.ui.graphics.Color.White,
         )
     }
 }

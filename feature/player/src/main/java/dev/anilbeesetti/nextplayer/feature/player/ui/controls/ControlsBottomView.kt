@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -199,6 +200,7 @@ fun ControlsBottomView(
                 Icon(
                     painter = painterResource(R.drawable.ic_lock_open),
                     contentDescription = null,
+                    tint = Color.White,
                 )
             }
             PlayerButton(
@@ -208,6 +210,7 @@ fun ControlsBottomView(
                 Icon(
                     painter = painterResource(videoContentScale.drawableRes()),
                     contentDescription = null,
+                    tint = Color.White,
                 )
             }
             if (isPipSupported) {
@@ -215,6 +218,7 @@ fun ControlsBottomView(
                     Icon(
                         painter = painterResource(R.drawable.ic_pip),
                         contentDescription = null,
+                        tint = Color.White,
                     )
                 }
             }
@@ -222,6 +226,7 @@ fun ControlsBottomView(
                 Icon(
                     painter = painterResource(R.drawable.ic_headset),
                     contentDescription = null,
+                    tint = Color.White,
                 )
             }
             LoopButton(player = player)

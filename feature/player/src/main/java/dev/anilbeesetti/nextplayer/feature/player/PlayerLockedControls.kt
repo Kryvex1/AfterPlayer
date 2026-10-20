@@ -34,6 +34,7 @@ fun PlayerLockedControls(
             Icon(
                 painter = painterResource(R.drawable.ic_lock),
                 contentDescription = stringResource(R.string.controls_unlock),
+                tint = Color.White,
             )
         }
     }

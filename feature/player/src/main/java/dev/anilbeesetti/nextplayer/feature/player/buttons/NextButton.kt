@@ -35,6 +35,7 @@ internal fun NextButton(
             painter = painterResource(coreUiR.drawable.ic_skip_next),
             contentDescription = stringResource(coreUiR.string.player_controls_next),
             modifier = Modifier.size(28.dp),
+            tint = androidx.compose.ui.graphics.Color.White,
         )
     }
 }

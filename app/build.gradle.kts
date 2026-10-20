@@ -14,14 +14,15 @@ android {
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        applicationId = "com.afterplayer.media"
-        versionCode = 74
+        applicationId = "in.umangsattawan.player"
+        versionCode = 76
         versionName = "1.26"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters.clear()
             abiFilters.add("arm64-v8a")
         }
+        resourceConfigurations += listOf("en", "hi")
     }
 
     splits {
@@ -56,9 +57,13 @@ android {
 
         getByName("debug") {
             isDebuggable = true
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 
@@ -85,6 +90,7 @@ android {
         }
         jniLibs {
             useLegacyPackaging = false
+            keepDebugSymbols.clear()
         }
     }
 

@@ -47,8 +47,8 @@ fun BoxScope.MediaDetailsView(
     val durationMs = remember(player.duration) { player.duration.coerceAtLeast(0L) }
     val durationFormatted = remember(durationMs) { durationMs.milliseconds.formatted() }
     val videoSize = player.videoSize
-    val realHeight = remember(player.videoFormat, videoSize) {
-        val h = player.videoFormat?.height ?: videoSize.height
+    val realHeight = remember(videoSize) {
+        val h = videoSize.height
         if (h > 0) "${h}p" else null
     }
     val resolutionLabel = realHeight

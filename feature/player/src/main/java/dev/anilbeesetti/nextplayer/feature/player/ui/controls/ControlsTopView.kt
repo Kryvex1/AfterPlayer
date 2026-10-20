@@ -78,6 +78,7 @@ fun ControlsTopView(
             Icon(
                 painter = painterResource(R.drawable.ic_arrow_left),
                 contentDescription = null,
+                tint = Color.White,
             )
         }
         Row(
@@ -100,19 +101,6 @@ fun ControlsTopView(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
-            if (!videoQualityBadge.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ) {
-                    Text(
-                        text = videoQualityBadge,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
-                }
-            }
         }
 
         Row(
@@ -128,6 +116,7 @@ fun ControlsTopView(
                 Text(
                     text = stringResource((videoDecoderMode ?: DecoderMode.HARDWARE).labelRes),
                     style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
                     maxLines = 1,
                 )
             }
@@ -135,18 +124,21 @@ fun ControlsTopView(
                 Icon(
                     painter = painterResource(R.drawable.ic_playlist),
                     contentDescription = null,
+                    tint = Color.White,
                 )
             }
             PlayerButton(onClick = onAudioClick) {
                 Icon(
                     painter = painterResource(R.drawable.ic_audio_track),
                     contentDescription = null,
+                    tint = Color.White,
                 )
             }
             PlayerButton(onClick = onSubtitleClick) {
                 Icon(
                     painter = painterResource(R.drawable.ic_subtitle_track),
                     contentDescription = null,
+                    tint = Color.White,
                 )
             }
         }

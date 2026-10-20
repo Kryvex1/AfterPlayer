@@ -12,30 +12,28 @@ val SFProMediumFontFamily = FontFamily(
     Font(R.font.sf_pro_medium, FontWeight.Light),
     Font(R.font.sf_pro_medium, FontWeight.Normal),
     Font(R.font.sf_pro_medium, FontWeight.Medium),
+    Font(R.font.kohinoor_devanagari, FontWeight.Normal),
 )
 
 val SFProBoldFontFamily = FontFamily(
     Font(R.font.sf_pro_bold, FontWeight.SemiBold),
     Font(R.font.sf_pro_bold, FontWeight.Bold),
     Font(R.font.sf_pro_bold, FontWeight.ExtraBold),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.Bold),
 )
 
 val KohinoorDevanagariFontFamily = FontFamily(
+    Font(R.font.kohinoor_devanagari, FontWeight.Light),
     Font(R.font.kohinoor_devanagari, FontWeight.Normal),
     Font(R.font.kohinoor_devanagari, FontWeight.Medium),
-    Font(R.font.kohinoor_devanagari, FontWeight.Bold),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.SemiBold),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.Bold),
 )
 
 // Legacy alias mapped to Kohinoor Devanagari
 val PoppinsFontFamily = KohinoorDevanagariFontFamily
 
-val SFProFontFamily = FontFamily(
-    Font(R.font.sf_pro_medium, FontWeight.Light),
-    Font(R.font.sf_pro_medium, FontWeight.Normal),
-    Font(R.font.sf_pro_medium, FontWeight.Medium),
-    Font(R.font.sf_pro_bold, FontWeight.SemiBold),
-    Font(R.font.sf_pro_bold, FontWeight.Bold),
-)
+val SFProFontFamily = SFProMediumFontFamily
 
 val Typography = Typography(
     displayLarge = TextStyle(

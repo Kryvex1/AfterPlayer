@@ -59,6 +59,8 @@ import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 import dev.anilbeesetti.nextplayer.core.ui.components.requestFocusUntilLanded
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
 
+import dev.anilbeesetti.nextplayer.feature.player.extensions.noRippleClickable
+
 @Composable
 fun BoxScope.OverlayView(
     modifier: Modifier = Modifier,
@@ -111,7 +113,8 @@ fun BoxScope.OverlayView(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.55f),
+                    .fillMaxHeight(0.55f)
+                    .noRippleClickable { /* consume click inside sheet */ },
             ) {
                 Column(
                     modifier = Modifier
@@ -155,7 +158,8 @@ fun BoxScope.OverlayView(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = modifier
                     .fillMaxWidth(0.44f)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    .noRippleClickable { /* consume click inside panel */ },
             ) {
                 Column(
                     modifier = Modifier

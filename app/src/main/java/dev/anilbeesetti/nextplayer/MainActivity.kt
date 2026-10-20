@@ -275,12 +275,6 @@ fun NavigationLayout(
                 modifier = Modifier.onSizeChanged { railWidth = with(density) { it.width.toDp() } },
             )
         }
-        InAppMiniPlayer(
-            controller = mediaController,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = if (showNavigation && showBottomBar && !showNavRail) 84.dp else 16.dp),
-        )
     }
 }
 

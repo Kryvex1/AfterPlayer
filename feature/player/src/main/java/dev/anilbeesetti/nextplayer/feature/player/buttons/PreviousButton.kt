@@ -35,6 +35,7 @@ internal fun PreviousButton(
             painter = painterResource(coreUiR.drawable.ic_skip_prev),
             contentDescription = stringResource(coreUiR.string.player_controls_previous),
             modifier = Modifier.size(28.dp),
+            tint = androidx.compose.ui.graphics.Color.White,
         )
     }
 }

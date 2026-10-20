@@ -33,6 +33,7 @@ fun LoopButton(
         Icon(
             painter = repeatModeIconPainter(state.repeatModeState),
             contentDescription = repeatModeContentDescription(state.repeatModeState),
+            tint = androidx.compose.ui.graphics.Color.White,
         )
     }
 }

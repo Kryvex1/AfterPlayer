@@ -18,7 +18,10 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -58,6 +61,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -296,20 +300,23 @@ fun NextNavigationBar(
                 Spacer(Modifier.weight(1f))
             }
 
+            val isDark = isSystemInDarkTheme()
             fabState?.let { fab ->
                 FloatingActionButton(
                     onClick = fab.onClick,
                     modifier = Modifier
                         .testTag("top_level_fab")
                         .focusRequester(fabFocusRequester)
-                        .tvFocusRing(shape = MaterialTheme.shapes.large)
+                        .tvFocusRing(shape = RoundedCornerShape(18.dp))
                         .focusProperties {
                             if (isTv) {
                                 up = fab.upFocusRequester.takeUnless { it == FocusRequester.Default }
                                     ?: contentFocusRequester
                             }
                         },
-                    shape = MaterialTheme.shapes.large,
+                    shape = RoundedCornerShape(18.dp),
+                    containerColor = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFD3E3FD),
+                    contentColor = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF041E49),
                 ) {
                     AnimatedContent(
                         targetState = fab,
@@ -353,6 +360,11 @@ fun NavigationView(
         label = "nav_pill_slide",
     )
 
+    val isDark = isSystemInDarkTheme()
+    val containerBg = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else Color(0xFFEFF2F7)
+    val pillBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFD3E3FD)
+    val borderColor = if (isDark) Color.White.copy(alpha = 0.12f) else Color(0xFFE0E5EC)
+
     Box(
         modifier = modifier
             .graphicsLayer(
@@ -360,16 +372,21 @@ fun NavigationView(
                 shape = CircleShape,
             )
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(containerBg)
+            .border(
+                border = BorderStroke(1.dp, borderColor),
+                shape = CircleShape,
+            )
             .padding(4.dp),
     ) {
+
         // Sliding pill that smoothly follows the selected destination
         Box(
             modifier = Modifier
                 .offset(x = animatedOffset)
                 .size(width = tabWidth, height = tabHeight)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .background(pillBg),
         )
 
         Row(
@@ -378,8 +395,10 @@ fun NavigationView(
         ) {
             destinations.forEachIndexed { index, destination ->
                 val selected = index == selectedIndex
+                val activeContentColor = if (isDark) Color.White else Color(0xFF041E49)
+                val inactiveContentColor = if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF444746)
                 val contentColor by androidx.compose.animation.animateColorAsState(
-                    targetValue = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    targetValue = if (selected) activeContentColor else inactiveContentColor,
                     animationSpec = tween(durationMillis = 200, easing = LinearEasing),
                     label = "tab_content_$index",
                 )

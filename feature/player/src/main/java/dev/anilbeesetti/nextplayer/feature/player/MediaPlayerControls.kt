@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -126,7 +127,7 @@ internal fun MediaPlayerControls(
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
+                        .background(Color.Black.copy(alpha = 0.40f)),
                 )
             }
             if (mediaPresentationState.isBuffering && !seekGestureState.isSeeking && !keyInputState.isSeeking) {
@@ -190,7 +191,10 @@ internal fun MediaPlayerControls(
                 videoDecoderMode = state.decoderServiceState.videoMode,
                 audioDecoderMode = state.decoderServiceState.audioMode,
                 videoContentScale = videoZoomAndContentScaleState.videoContentScale,
-                onDismiss = { onOverlayChange(null) },
+                onDismiss = {
+                    onOverlayChange(null)
+                    controlsVisibilityState.hideControls()
+                },
                 onVideoDecoderModeSelected = { onAction(PlayerAction.SetVideoDecoderMode(it)) },
                 onAudioDecoderModeSelected = { onAction(PlayerAction.SetAudioDecoderMode(it)) },
                 onSelectSubtitleClick = { onAction(PlayerAction.SelectSubtitle) },
