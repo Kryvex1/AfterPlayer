@@ -224,35 +224,78 @@ fun TopLevelNavState.indexOfDestination(contentKey: Any?): Int {
 fun TopLevelNavState.isNavigationBetweenTopLevelDestinations(initialState: Scene<NavKey>, targetState: Scene<NavKey>): Boolean =
     topLevelContentKeys.run { contains(initialState.entries.lastOrNull()?.contentKey) && contains(targetState.entries.lastOrNull()?.contentKey) }
 
-internal fun TopLevelNavState.navigationTransition(initialState: Scene<NavKey>, targetState: Scene<NavKey>): ContentTransform {
+internal fun TopLevelNavState.navigationTransition(
+    initialState: Scene<NavKey>,
+    targetState: Scene<NavKey>,
+    isPop: Boolean = false,
+): ContentTransform {
     if (isNavigationBetweenTopLevelDestinations(initialState, targetState)) {
         val fromIndex = indexOfDestination(initialState.entries.lastOrNull()?.contentKey)
         val toIndex = indexOfDestination(targetState.entries.lastOrNull()?.contentKey)
-        val isForward = if (fromIndex != -1 && toIndex != -1) toIndex >= fromIndex else true
+        val isForward = if (fromIndex != -1 && toIndex != -1) toIndex >= fromIndex else !isPop
 
-        return (
-            slideInHorizontally(
-                initialOffsetX = { fullWidth -> if (isForward) fullWidth else -fullWidth },
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-            )
-        ) togetherWith (
-            slideOutHorizontally(
-                targetOffsetX = { fullWidth -> if (isForward) -fullWidth else fullWidth },
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-            )
+        return ContentTransform(
+            targetContentEnter = fadeIn(
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+            ) + slideInHorizontally(
+                initialOffsetX = { fullWidth -> if (isForward) (fullWidth * 0.14f).toInt() else -(fullWidth * 0.14f).toInt() },
+                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+            ),
+            initialContentExit = fadeOut(
+                animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+            ) + slideOutHorizontally(
+                targetOffsetX = { fullWidth -> if (isForward) -(fullWidth * 0.10f).toInt() else (fullWidth * 0.10f).toInt() },
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+            ),
+            targetContentZIndex = if (isPop) 0f else 1f,
         )
     }
 
-    // Quick Back can select the pop spec while the animated scenes still describe the push.
-    // Keep the direction tied to those scenes so the existing slide can reverse smoothly.
-    val isPop = initialState.previousEntries.any { it.contentKey == targetState.entries.lastOrNull()?.contentKey }
-    return slideInHorizontally(
-        initialOffsetX = { if (isPop) -(it * 0.3f).toInt() else it },
-        animationSpec = tween(durationMillis = 200, easing = LinearEasing),
-    ) togetherWith slideOutHorizontally(
-        targetOffsetX = { if (isPop) it else -(it * 0.3f).toInt() },
-        animationSpec = tween(durationMillis = 200, easing = LinearEasing),
-    )
+    val resolvedPop = isPop ||
+        initialState.previousEntries.any { it.contentKey == targetState.entries.lastOrNull()?.contentKey } ||
+        targetState.entries.size < initialState.entries.size
+
+    return if (resolvedPop) {
+        ContentTransform(
+            targetContentEnter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> -(fullWidth * 0.25f).toInt() },
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            ) + fadeIn(
+                initialAlpha = 0.85f,
+                animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing),
+            ),
+            initialContentExit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            ) + scaleOut(
+                targetScale = 0.94f,
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            ) + fadeOut(
+                animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing),
+            ),
+            targetContentZIndex = -1f,
+        )
+    } else {
+        ContentTransform(
+            targetContentEnter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            ) + fadeIn(
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+            ),
+            initialContentExit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> -(fullWidth * 0.25f).toInt() },
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            ) + scaleOut(
+                targetScale = 0.95f,
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            ) + fadeOut(
+                targetAlpha = 0.85f,
+                animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing),
+            ),
+            targetContentZIndex = 1f,
+        )
+    }
 }
 
 @Composable
@@ -272,7 +315,7 @@ fun NextNavigationBar(
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
                         ),
                     ),
                 )
@@ -300,7 +343,6 @@ fun NextNavigationBar(
                 Spacer(Modifier.weight(1f))
             }
 
-            val isDark = isSystemInDarkTheme()
             fabState?.let { fab ->
                 FloatingActionButton(
                     onClick = fab.onClick,
@@ -315,21 +357,21 @@ fun NextNavigationBar(
                             }
                         },
                     shape = RoundedCornerShape(18.dp),
-                    containerColor = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFD3E3FD),
-                    contentColor = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF041E49),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ) {
                     AnimatedContent(
-                        targetState = fab,
+                        targetState = fab.icon,
                         transitionSpec = {
-                            fadeIn(tween(250, easing = FastOutSlowInEasing)) +
-                                scaleIn(tween(250, easing = FastOutSlowInEasing), initialScale = 0.25f) togetherWith
-                                fadeOut(tween(250, easing = FastOutSlowInEasing)) +
-                                scaleOut(tween(250, easing = FastOutSlowInEasing), targetScale = 0.25f)
+                            fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                                scaleIn(tween(220, easing = FastOutSlowInEasing), initialScale = 0.4f) togetherWith
+                                fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                                scaleOut(tween(180, easing = FastOutSlowInEasing), targetScale = 0.4f)
                         },
                         label = "fab_icon_swap",
-                    ) { fab ->
+                    ) { icon ->
                         Icon(
-                            imageVector = fab.icon,
+                            imageVector = icon,
                             contentDescription = null,
                         )
                     }
@@ -354,16 +396,18 @@ fun NavigationView(
     val animatedOffset by animateDpAsState(
         targetValue = (tabWidth + spacing) * selectedIndex,
         animationSpec = spring(
-            stiffness = Spring.StiffnessMediumLow,
+            stiffness = Spring.StiffnessMedium,
             dampingRatio = Spring.DampingRatioNoBouncy,
         ),
         label = "nav_pill_slide",
     )
 
-    val isDark = isSystemInDarkTheme()
-    val containerBg = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else Color(0xFFEFF2F7)
-    val pillBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFD3E3FD)
-    val borderColor = if (isDark) Color.White.copy(alpha = 0.12f) else Color(0xFFE0E5EC)
+    val colorScheme = MaterialTheme.colorScheme
+    val containerBg = colorScheme.surfaceContainerHigh
+    val pillBg = colorScheme.primaryContainer
+    val borderColor = colorScheme.outlineVariant.copy(alpha = 0.55f)
+    val activeContentColor = colorScheme.onPrimaryContainer
+    val inactiveContentColor = colorScheme.onSurfaceVariant
 
     Box(
         modifier = modifier
@@ -379,11 +423,12 @@ fun NavigationView(
             )
             .padding(4.dp),
     ) {
-
-        // Sliding pill that smoothly follows the selected destination
+        // Sliding pill translated purely on the RenderThread (zero layout passes per frame)
         Box(
             modifier = Modifier
-                .offset(x = animatedOffset)
+                .graphicsLayer {
+                    translationX = animatedOffset.toPx()
+                }
                 .size(width = tabWidth, height = tabHeight)
                 .clip(CircleShape)
                 .background(pillBg),
@@ -395,11 +440,9 @@ fun NavigationView(
         ) {
             destinations.forEachIndexed { index, destination ->
                 val selected = index == selectedIndex
-                val activeContentColor = if (isDark) Color.White else Color(0xFF041E49)
-                val inactiveContentColor = if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF444746)
                 val contentColor by androidx.compose.animation.animateColorAsState(
                     targetValue = if (selected) activeContentColor else inactiveContentColor,
-                    animationSpec = tween(durationMillis = 200, easing = LinearEasing),
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                     label = "tab_content_$index",
                 )
                 Box(

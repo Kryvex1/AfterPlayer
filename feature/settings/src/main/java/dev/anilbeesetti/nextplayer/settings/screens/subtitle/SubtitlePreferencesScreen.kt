@@ -148,13 +148,6 @@ private fun SubtitlePreferencesScreenContent(
                     onClick = { context.startActivity(Intent(Settings.ACTION_CAPTIONING_SETTINGS)) },
                     isFirstItem = true,
                 )
-                ClickablePreferenceItem(
-                    title = stringResource(id = R.string.subtitle_font),
-                    description = state.preferences.subtitleFont.name(),
-                    icon = NextIcons.Font,
-                    enabled = state.preferences.useSystemCaptionStyle.not(),
-                    onClick = { onAction(SubtitlePreferencesUiEvent.ShowDialog(SubtitlePreferenceDialog.SubtitleFontDialog)) },
-                )
                 PreferenceSwitch(
                     title = stringResource(id = R.string.subtitle_text_bold),
                     description = stringResource(id = R.string.subtitle_text_bold_desc),
@@ -213,6 +206,11 @@ private fun SubtitlePreferencesScreenContent(
                         SubtitleAnimation.NONE -> stringResource(R.string.subtitle_animation_none)
                         SubtitleAnimation.FADE -> stringResource(R.string.subtitle_animation_fade)
                         SubtitleAnimation.TYPEWRITER -> stringResource(R.string.subtitle_animation_typewriter)
+                        SubtitleAnimation.SLIDE_UP -> stringResource(R.string.subtitle_animation_slide_up)
+                        SubtitleAnimation.POP_IN -> stringResource(R.string.subtitle_animation_pop_in)
+                        SubtitleAnimation.WORD_BY_WORD -> stringResource(R.string.subtitle_animation_word_by_word)
+                        SubtitleAnimation.SLIDE_HORIZONTAL -> stringResource(R.string.subtitle_animation_slide_horizontal)
+                        SubtitleAnimation.BOUNCE_DROP -> stringResource(R.string.subtitle_animation_bounce_drop)
                     },
                     icon = NextIcons.Speed,
                     enabled = state.preferences.useSystemCaptionStyle.not(),
@@ -289,6 +287,11 @@ private fun SubtitlePreferencesScreenContent(
                                     SubtitleAnimation.NONE -> stringResource(R.string.subtitle_animation_none)
                                     SubtitleAnimation.FADE -> stringResource(R.string.subtitle_animation_fade)
                                     SubtitleAnimation.TYPEWRITER -> stringResource(R.string.subtitle_animation_typewriter)
+                                    SubtitleAnimation.SLIDE_UP -> stringResource(R.string.subtitle_animation_slide_up)
+                                    SubtitleAnimation.POP_IN -> stringResource(R.string.subtitle_animation_pop_in)
+                                    SubtitleAnimation.WORD_BY_WORD -> stringResource(R.string.subtitle_animation_word_by_word)
+                                    SubtitleAnimation.SLIDE_HORIZONTAL -> stringResource(R.string.subtitle_animation_slide_horizontal)
+                                    SubtitleAnimation.BOUNCE_DROP -> stringResource(R.string.subtitle_animation_bounce_drop)
                                 },
                                 selected = it == state.preferences.subtitleAnimation,
                                 onClick = {

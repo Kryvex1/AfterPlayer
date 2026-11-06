@@ -182,9 +182,19 @@ fun ControlsBottomView(
                 }
             }
         }
+        val isNetworkStream = remember(player?.currentMediaItem) {
+            val scheme = player?.currentMediaItem?.localConfiguration?.uri?.scheme?.lowercase()
+            scheme != null && scheme != "file" && scheme != "content"
+        }
+        val bufferedPosition = if (isNetworkStream) {
+            (player?.bufferedPosition ?: 0L).coerceAtLeast(progressState.currentPositionMs).toFloat()
+        } else {
+            0f
+        }
         PlayerSeekbar(
             position = progressState.currentPositionMs.toFloat(),
             duration = progressState.durationMs.toFloat(),
+            bufferedPosition = bufferedPosition,
             chapters = chaptersState.chapters,
             onSeek = { onSeek(it.toLong()) },
             onSeekFinished = { onSeekEnd() },
@@ -221,13 +231,6 @@ fun ControlsBottomView(
                         tint = Color.White,
                     )
                 }
-            }
-            PlayerButton(onClick = onPlayInBackgroundClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_headset),
-                    contentDescription = null,
-                    tint = Color.White,
-                )
             }
             LoopButton(player = player)
             ShuffleButton(player = player)

@@ -25,10 +25,9 @@ fun rememberVolumeAndBrightnessGestureState(
     enableBrightnessGesture: Boolean,
     volumeGestureSensitivity: Float,
     brightnessGestureSensitivity: Float,
-    onMinimize: () -> Unit = {},
 ): VolumeAndBrightnessGestureState {
     val coroutineScope = rememberCoroutineScope()
-    val volumeAndBrightnessGestureState = remember(volumeState, brightnessState, onMinimize) {
+    val volumeAndBrightnessGestureState = remember(volumeState, brightnessState) {
         VolumeAndBrightnessGestureState(
             volumeState = volumeState,
             brightnessState = brightnessState,
@@ -36,7 +35,6 @@ fun rememberVolumeAndBrightnessGestureState(
             enableBrightnessGesture = enableBrightnessGesture,
             volumeGestureSensitivity = volumeGestureSensitivity,
             brightnessGestureSensitivity = brightnessGestureSensitivity,
-            onMinimize = onMinimize,
             coroutineScope = coroutineScope,
         )
     }
@@ -51,7 +49,6 @@ class VolumeAndBrightnessGestureState(
     private val enableBrightnessGesture: Boolean = true,
     private val volumeGestureSensitivity: Float,
     private val brightnessGestureSensitivity: Float,
-    private val onMinimize: () -> Unit = {},
     private val coroutineScope: CoroutineScope,
 ) {
     var activeGesture: VerticalGesture? by mutableStateOf(null)
@@ -66,20 +63,16 @@ class VolumeAndBrightnessGestureState(
     private var startingY = 0f
     private var startVolumePercentage = 0
     private var startBrightnessPercentage = 0
-    private var hasTriggeredMinimize = false
     private var job: Job? = null
 
     fun onDragStart(offset: Offset, size: IntSize) {
-        val leftBoundary = size.width * 0.35f
-        val rightBoundary = size.width * 0.65f
+        val viewCenterX = size.width / 2
         job?.cancel()
         activeGesture = when {
-            offset.x < leftBoundary -> VerticalGesture.BRIGHTNESS.takeIf { enableBrightnessGesture }
-            offset.x > rightBoundary -> VerticalGesture.VOLUME.takeIf { enableVolumeGesture }
-            else -> VerticalGesture.MINIMIZE
+            offset.x < viewCenterX -> VerticalGesture.BRIGHTNESS.takeIf { enableBrightnessGesture }
+            else -> VerticalGesture.VOLUME.takeIf { enableVolumeGesture }
         }
         startingY = offset.y
-        hasTriggeredMinimize = false
         volumeState.syncWithSystem()
         startVolumePercentage = volumeState.volumePercentage
         startBrightnessPercentage = brightnessState.brightnessPercentage
@@ -112,15 +105,6 @@ class VolumeAndBrightnessGestureState(
                 volumeChangePercentage = 0
                 brightnessState.updateBrightnessPercentage(newBrightness)
             }
-
-            VerticalGesture.MINIMIZE -> {
-                val dragY = change.position.y - startingY
-                if (dragY > 120f && !hasTriggeredMinimize) {
-                    hasTriggeredMinimize = true
-                    change.consume()
-                    onMinimize()
-                }
-            }
         }
     }
 
@@ -128,7 +112,6 @@ class VolumeAndBrightnessGestureState(
         startingY = 0f
         startVolumePercentage = 0
         startBrightnessPercentage = 0
-        hasTriggeredMinimize = false
 
         job?.cancel()
         job = coroutineScope.launch {
@@ -147,5 +130,4 @@ class VolumeAndBrightnessGestureState(
 enum class VerticalGesture {
     VOLUME,
     BRIGHTNESS,
-    MINIMIZE,
 }

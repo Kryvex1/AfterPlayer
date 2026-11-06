@@ -14,7 +14,7 @@ android {
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        applicationId = "in.umangsattawan.player"
+        applicationId = "Openmedia.Afterplayer.com"
         versionCode = 76
         versionName = "1.26"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -56,7 +56,7 @@ android {
         }
 
         getByName("debug") {
-            isDebuggable = true
+            isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")

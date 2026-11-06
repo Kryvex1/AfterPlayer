@@ -14,6 +14,7 @@ object TopLevelFabKey {
     const val MORE = "more"
 }
 
+@androidx.compose.runtime.Stable
 data class TopLevelFabState(
     val icon: ImageVector,
     val onClick: () -> Unit,
@@ -29,7 +30,11 @@ fun BindTopLevelBottomBarVisible(visible: Boolean) {
 
     DisposableEffect(visible, setter) {
         setter(visible)
-        onDispose { setter(true) }
+        onDispose {
+            if (!visible) {
+                setter(true)
+            }
+        }
     }
 }
 

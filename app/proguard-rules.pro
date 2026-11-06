@@ -16,6 +16,9 @@
 -dontwarn io.github.anilbeesetti.nextlib.**
 
 -keep class io.github.anilbeesetti.nextlib.mediainfo.** { *; }
+-keep class io.github.anilbeesetti.nextlib.media3ext.** { *; }
+-keep class androidx.media3.decoder.** { *; }
+-keep class androidx.media3.exoplayer.mediacodec.** { *; }
 
 # -------------------------------------------------------------
 # Kotlin Coroutines & Reflection

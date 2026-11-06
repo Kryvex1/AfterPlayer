@@ -3,7 +3,9 @@ package dev.anilbeesetti.nextplayer.core.ui.components
 import android.os.Build
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +31,7 @@ fun NextDialog(
     dialogProperties: DialogProperties = NextDialogDefaults.dialogProperties,
 ) {
     val configuration = LocalConfiguration.current
+    val maxDialogWidth = minOf(360.dp, configuration.screenWidthDp.dp - NextDialogDefaults.dialogMargin * 2)
 
     AlertDialog(
         title = title,
@@ -40,29 +43,31 @@ fun NextDialog(
                     parent = parent.parent
                 }
                 (parent as? DialogWindowProvider)?.window?.let { window ->
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        try {
-                            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                            window.attributes = window.attributes.apply {
-                                blurBehindRadius = 40
-                            }
-                        } catch (_: Exception) {
-                        }
-                    }
                     try {
-                        window.setDimAmount(0.65f)
+                        window.setLayout(
+                            WindowManager.LayoutParams.WRAP_CONTENT,
+                            WindowManager.LayoutParams.WRAP_CONTENT,
+                        )
+                        window.setDimAmount(0.60f)
                         window.setWindowAnimations(android.R.style.Animation_Dialog)
                     } catch (_: Exception) {
                     }
                 }
                 onDispose { }
             }
-            Column { content() }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+            ) {
+                content()
+            }
         },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
-            .widthIn(max = configuration.screenWidthDp.dp - NextDialogDefaults.dialogMargin * 2),
+            .widthIn(min = 280.dp, max = maxDialogWidth)
+            .wrapContentHeight(),
         onDismissRequest = onDismissRequest,
         confirmButton = confirmButton,
         dismissButton = dismissButton,
@@ -78,7 +83,7 @@ fun NextDialogWithDoneAndCancelButtons(
     content: @Composable () -> Unit,
 ) {
     NextDialog(
-        title = { Text(text = title) },
+        title = { Text(text = title, style = MaterialTheme.typography.titleMedium) },
         confirmButton = { DoneButton(onClick = onDoneClick) },
         dismissButton = { CancelButton(onClick = onDismissClick) },
         onDismissRequest = onDismissClick,
@@ -93,5 +98,5 @@ object NextDialogDefaults {
         dismissOnClickOutside = true,
         decorFitsSystemWindows = true,
     )
-    val dialogMargin: Dp = 16.dp
+    val dialogMargin: Dp = 24.dp
 }

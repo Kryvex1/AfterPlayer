@@ -2,9 +2,13 @@ package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -45,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -54,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 import dev.anilbeesetti.nextplayer.core.ui.components.requestFocusUntilLanded
@@ -84,6 +90,20 @@ fun BoxScope.OverlayView(
         }
     }
 
+    val slideSpring = spring<IntOffset>(
+        dampingRatio = 0.78f,
+        stiffness = Spring.StiffnessMediumLow,
+    )
+    val scaleSpring = spring<Float>(
+        dampingRatio = 0.76f,
+        stiffness = Spring.StiffnessMediumLow,
+    )
+    val origin = if (configuration.isPortrait) {
+        TransformOrigin(0.5f, 1f)
+    } else {
+        TransformOrigin(1f, 0.5f)
+    }
+
     AnimatedVisibility(
         modifier = Modifier.align(
             if (configuration.isPortrait) {
@@ -94,15 +114,23 @@ fun BoxScope.OverlayView(
         ),
         visible = show,
         enter = (if (configuration.isPortrait) {
-            slideInVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it }
+            slideInVertically(animationSpec = slideSpring) { (it * 0.85f).toInt() }
         } else {
-            slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it }
-        }) + fadeIn(animationSpec = tween(250)),
+            slideInHorizontally(animationSpec = slideSpring) { (it * 0.85f).toInt() }
+        }) + scaleIn(
+            initialScale = 0.88f,
+            transformOrigin = origin,
+            animationSpec = scaleSpring,
+        ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)),
         exit = (if (configuration.isPortrait) {
-            slideOutVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it }
+            slideOutVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) { (it * 0.85f).toInt() }
         } else {
-            slideOutHorizontally(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it }
-        }) + fadeOut(animationSpec = tween(200)),
+            slideOutHorizontally(animationSpec = tween(220, easing = FastOutSlowInEasing)) { (it * 0.85f).toInt() }
+        }) + scaleOut(
+            targetScale = 0.90f,
+            transformOrigin = origin,
+            animationSpec = tween(200, easing = FastOutSlowInEasing),
+        ) + fadeOut(animationSpec = tween(180)),
     ) {
         if (configuration.isPortrait) {
             // Portrait: Bottom Sheet

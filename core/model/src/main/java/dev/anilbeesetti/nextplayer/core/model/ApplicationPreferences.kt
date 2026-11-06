@@ -29,7 +29,7 @@ data class ApplicationPreferences(
     val newVideoThresholdDays: Int = 7,
 
     // Thumbnail generation
-    val thumbnailGenerationStrategy: ThumbnailGenerationStrategy = ThumbnailGenerationStrategy.FRAME_AT_PERCENTAGE,
+    val thumbnailGenerationStrategy: ThumbnailGenerationStrategy = ThumbnailGenerationStrategy.FIRST_FRAME,
     val thumbnailFramePosition: Float = DEFAULT_THUMBNAIL_FRAME_POSITION,
 ) {
 

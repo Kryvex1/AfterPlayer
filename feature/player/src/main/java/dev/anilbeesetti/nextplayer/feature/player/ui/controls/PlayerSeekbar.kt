@@ -52,6 +52,7 @@ internal fun PlayerSeekbar(
     modifier: Modifier = Modifier,
     position: Float,
     duration: Float,
+    bufferedPosition: Float = 0f,
     chapters: List<Chapter>,
     onSeek: (Float) -> Unit,
     onSeekFinished: () -> Unit,
@@ -82,6 +83,7 @@ internal fun PlayerSeekbar(
                 isFocused = isFocused,
                 chapters = chapters,
                 value = position,
+                bufferedValue = bufferedPosition,
                 valueRange = 0f..(duration.takeIf { it > 0 } ?: 0f),
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
@@ -92,6 +94,7 @@ internal fun PlayerSeekbar(
                 isFocused = isFocused,
                 chapters = chapters,
                 value = position,
+                bufferedValue = bufferedPosition,
                 valueRange = 0f..(duration.takeIf { it > 0 } ?: 0f),
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
@@ -106,6 +109,7 @@ internal fun PlayerSeekbar(
 private fun MaterialYouSlider(
     modifier: Modifier = Modifier,
     value: Float,
+    bufferedValue: Float = 0f,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
@@ -113,6 +117,7 @@ private fun MaterialYouSlider(
     chapters: List<Chapter> = emptyList(),
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
+    val bufferedColor = Color.White.copy(alpha = 0.65f)
     val interactionSource = remember { MutableInteractionSource() }
     val trackHeight = 8.dp
     val thumbWidth = 4.dp
@@ -128,7 +133,7 @@ private fun MaterialYouSlider(
         interactionSource = interactionSource,
         modifier = modifier.size(24.dp),
         track = { sliderState ->
-            val disabledAlpha = 0.4f
+            val disabledAlpha = 0.32f
 
             Canvas(
                 modifier = Modifier
@@ -140,7 +145,9 @@ private fun MaterialYouSlider(
                 val max = sliderState.valueRange.endInclusive
                 val range = (max - min).takeIf { it > 0f } ?: 1f
                 val playedFraction = ((sliderState.value - min) / range).coerceIn(0f, 1f)
+                val bufferedFraction = ((bufferedValue - min) / range).coerceIn(0f, 1f)
                 val playedPixels = size.width * playedFraction
+                val bufferedPixels = size.width * bufferedFraction
 
                 val endCornerRadius = size.height / 2f
                 val insideCornerRadius = 2.dp.toPx()
@@ -167,6 +174,18 @@ private fun MaterialYouSlider(
                         color = primaryColor.copy(alpha = disabledAlpha),
                         startCornerRadius = insideCornerRadius,
                         endCornerRadius = endCornerRadius,
+                    )
+                }
+
+                // Network buffered track (shown ahead of thumb on right side)
+                if (bufferedPixels > rightStart) {
+                    val bufEnd = bufferedPixels.coerceAtMost(size.width)
+                    drawRoundedRect(
+                        offset = Offset(rightStart, 0f),
+                        size = Size(bufEnd - rightStart, size.height),
+                        color = bufferedColor,
+                        startCornerRadius = insideCornerRadius,
+                        endCornerRadius = if (bufEnd >= size.width - 1f) endCornerRadius else insideCornerRadius,
                     )
                 }
 
@@ -229,6 +248,7 @@ private fun DrawScope.drawRoundedRect(
 private fun SimpleSlider(
     modifier: Modifier = Modifier,
     value: Float,
+    bufferedValue: Float = 0f,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
@@ -264,12 +284,20 @@ private fun SimpleSlider(
                     .height(4.dp)
                     .chapterGaps(chapters, valueRange.endInclusive)
                     .clip(MaterialTheme.shapes.extraSmall)
-                    .background(Color.White.copy(0.5f)),
+                    .background(Color.White.copy(0.35f)),
             ) {
                 if (valueRange.endInclusive > 0f) {
+                    if (bufferedValue > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth((bufferedValue / valueRange.endInclusive).coerceIn(0f, 1f))
+                                .height(4.dp)
+                                .background(Color.White.copy(alpha = 0.7f)),
+                        )
+                    }
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(value / valueRange.endInclusive)
+                            .fillMaxWidth((value / valueRange.endInclusive).coerceIn(0f, 1f))
                             .height(4.dp)
                             .background(MaterialTheme.colorScheme.primary),
                     )

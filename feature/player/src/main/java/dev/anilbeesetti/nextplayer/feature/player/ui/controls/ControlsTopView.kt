@@ -101,6 +101,20 @@ fun ControlsTopView(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
+            if (!videoQualityBadge.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.White.copy(alpha = 0.18f),
+                ) {
+                    Text(
+                        text = videoQualityBadge,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
         }
 
         Row(

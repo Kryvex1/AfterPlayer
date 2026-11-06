@@ -1,5 +1,8 @@
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +24,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,7 +40,11 @@ import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import dev.anilbeesetti.nextplayer.feature.player.extensions.formatted
+import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
+import kotlin.math.round
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -44,14 +54,101 @@ fun BoxScope.MediaDetailsView(
     title: String,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     val durationMs = remember(player.duration) { player.duration.coerceAtLeast(0L) }
     val durationFormatted = remember(durationMs) { durationMs.milliseconds.formatted() }
     val videoSize = player.videoSize
-    val realHeight = remember(videoSize) {
+    val resolutionLabel = remember(videoSize) {
+        val w = videoSize.width
         val h = videoSize.height
-        if (h > 0) "${h}p" else null
+        val shortEdge = if (w > 0 && h > 0) minOf(w, h) else h
+        if (shortEdge > 0) "${shortEdge}p" else null
     }
-    val resolutionLabel = realHeight
+    val trackFrameRate = remember(player.currentTracks) {
+        val videoTrackGroup = player.currentTracks.groups.firstOrNull {
+            it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO && it.isSelected
+        } ?: player.currentTracks.groups.firstOrNull {
+            it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO
+        }
+        (0 until (videoTrackGroup?.length ?: 0))
+            .map { videoTrackGroup!!.getTrackFormat(it).frameRate }
+            .firstOrNull { it > 0f }
+    }
+    val resolvedFrameRate by produceState<Float?>(
+        initialValue = trackFrameRate,
+        key1 = player.currentMediaItem?.mediaId,
+        key2 = trackFrameRate,
+        key3 = show,
+    ) {
+        if (trackFrameRate != null && trackFrameRate > 0f) {
+            value = trackFrameRate
+            return@produceState
+        }
+        if (!show) return@produceState
+        val mediaItem = player.currentMediaItem ?: return@produceState
+        val uri = mediaItem.localConfiguration?.uri
+            ?: mediaItem.mediaId.takeIf { it.isNotBlank() }?.let(Uri::parse)
+            ?: return@produceState
+
+        value = withContext(Dispatchers.IO) {
+            // 1. Fast check via Android MediaExtractor
+            val extractorFps = runCatching {
+                val extractor = MediaExtractor()
+                try {
+                    extractor.setDataSource(context, uri, null)
+                    var fps: Float? = null
+                    for (i in 0 until extractor.trackCount) {
+                        val format = extractor.getTrackFormat(i)
+                        val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
+                        if (mime.startsWith("video/") && format.containsKey(MediaFormat.KEY_FRAME_RATE)) {
+                            fps = runCatching { format.getFloat(MediaFormat.KEY_FRAME_RATE) }
+                                .getOrElse { format.getInteger(MediaFormat.KEY_FRAME_RATE).toFloat() }
+                            if (fps != null && fps > 0f) break
+                        }
+                    }
+                    fps
+                } finally {
+                    extractor.release()
+                }
+            }.getOrNull()
+
+            if (extractorFps != null && extractorFps > 0f) {
+                return@withContext extractorFps
+            }
+
+            // 2. Reliable FFmpeg MediaInfoBuilder fallback for MKV/WebM/MP4 containers
+            runCatching {
+                val mediaInfo = MediaInfoBuilder().from(context = context, uri = uri).build()
+                try {
+                    mediaInfo?.videoStream?.frameRate?.toFloat()?.takeIf { it > 0f }
+                } finally {
+                    mediaInfo?.release()
+                }
+            }.getOrNull()
+        }
+    }
+    val frameRateFormatted = remember(resolvedFrameRate) {
+        val fps = resolvedFrameRate
+        if (fps != null && fps > 0f) {
+            val rounded = round(fps * 100f) / 100f
+            if (rounded % 1f == 0f) {
+                "${rounded.toInt()} FPS"
+            } else {
+                "$rounded FPS"
+            }
+        } else {
+            null
+        }
+    }
+    val videoCodecLabel = remember(player.currentTracks) {
+        val videoTrackGroup = player.currentTracks.groups.firstOrNull {
+            it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO && it.isSelected
+        } ?: player.currentTracks.groups.firstOrNull {
+            it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO
+        }
+        val format = if ((videoTrackGroup?.length ?: 0) > 0) videoTrackGroup?.getTrackFormat(0) else null
+        format?.sampleMimeType?.substringAfter("video/")?.uppercase()
+    }
     val uriString = remember(player.currentMediaItem) {
         player.currentMediaItem?.localConfiguration?.uri?.path
             ?: player.currentMediaItem?.localConfiguration?.uri?.toString()
@@ -69,7 +166,7 @@ fun BoxScope.MediaDetailsView(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Full title card
+            // Full title card with Quality & FPS badges
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
                 shape = RoundedCornerShape(16.dp),
@@ -82,20 +179,57 @@ fun BoxScope.MediaDetailsView(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    if (resolutionLabel != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                    if (resolutionLabel != null || frameRateFormatted != null || videoCodecLabel != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = resolutionLabel,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                            if (resolutionLabel != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                ) {
+                                    Text(
+                                        text = resolutionLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                            if (frameRateFormatted != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                ) {
+                                    Text(
+                                        text = frameRateFormatted,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                            if (videoCodecLabel != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                ) {
+                                    Text(
+                                        text = videoCodecLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -114,8 +248,22 @@ fun BoxScope.MediaDetailsView(
                     if (videoSize.width > 0 && videoSize.height > 0) {
                         DetailItem(
                             icon = NextIcons.Size,
-                            label = "Resolution",
+                            label = stringResource(R.string.resolution),
                             value = "${videoSize.width} × ${videoSize.height}",
+                        )
+                    }
+                    if (frameRateFormatted != null) {
+                        DetailItem(
+                            icon = NextIcons.Speed,
+                            label = stringResource(R.string.frame_rate),
+                            value = frameRateFormatted,
+                        )
+                    }
+                    if (videoCodecLabel != null) {
+                        DetailItem(
+                            icon = NextIcons.Video,
+                            label = stringResource(R.string.codec),
+                            value = videoCodecLabel,
                         )
                     }
                     if (durationMs > 0) {

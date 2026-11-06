@@ -33,7 +33,11 @@ import coil3.util.component2
 import kotlin.math.roundToInt
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+
+private val thumbnailDecodeSemaphore = Semaphore(permits = 2)
 
 class VideoThumbnailDecoder(
     private val source: ImageSource,
@@ -56,123 +60,105 @@ class VideoThumbnailDecoder(
     override suspend fun decode(): DecodeResult = withContext(Dispatchers.IO) {
         readFromDiskCache()?.use { snapshot ->
             val file = snapshot.data.toFile()
-
-            // Read cached image dimensions (no pixel allocation)
-            val boundsOpts = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
+            val decodeOpts = BitmapFactory.Options().apply {
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
-            file.inputStream().use { BitmapFactory.decodeStream(it, null, boundsOpts) }
-            val cachedWidth = boundsOpts.outWidth
-            val cachedHeight = boundsOpts.outHeight
-
-            // Determine what size the caller actually wants
-            val requestedWidth = options.size.width.pxOrElse { 0 }
-            val requestedHeight = options.size.height.pxOrElse { 0 }
-
-            // Cache is sufficient only if requested size <= cached size (or size is unspecified)
-            val cacheIsSufficient = (requestedWidth == 0 || requestedWidth <= cachedWidth) &&
-                    (requestedHeight == 0 || requestedHeight <= cachedHeight)
-
-            if (cacheIsSufficient) {
-                val dstSize = computeDstSize(cachedWidth, cachedHeight)
-                val decodeOpts = BitmapFactory.Options().apply {
-                    inPreferredConfig = Bitmap.Config.RGB_565
-                }
-                val sampledBitmap = file.inputStream().use { BitmapFactory.decodeStream(it, null, decodeOpts) }
-                if (sampledBitmap != null) {
-                    val normalizedBitmap = normalizeBitmap(
-                        inBitmap = sampledBitmap,
-                        srcWidth = cachedWidth,
-                        srcHeight = cachedHeight,
-                        dstSize = dstSize,
-                    )
-                    return@withContext DecodeResult(
-                        image = normalizedBitmap.toDrawable(options.context.resources).asImage(),
-                        isSampled = DecodeUtils.computeSizeMultiplier(
-                            srcWidth = cachedWidth,
-                            srcHeight = cachedHeight,
-                            dstWidth = normalizedBitmap.width,
-                            dstHeight = normalizedBitmap.height,
-                            scale = options.scale,
-                            maxSize = options.maxBitmapSize,
-                        ) < 1.0,
-                    )
-                }
+            val cachedBitmap = runCatching {
+                file.inputStream().use { BitmapFactory.decodeStream(it, null, decodeOpts) }
+            }.getOrNull()
+            if (cachedBitmap != null && cachedBitmap.width > 0 && cachedBitmap.height > 0) {
+                return@withContext DecodeResult(
+                    image = cachedBitmap.toDrawable(options.context.resources).asImage(),
+                    isSampled = true,
+                )
             }
         }
 
-        // Cache miss OR cache insufficient: decode fresh thumbnail with lightweight 240px default
-        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 240 }, options.size.height.pxOrElse { 240 })
-        val targetWidth = requestedDstSize.width.pxOrElse { 240 }.coerceIn(128, 240)
-        val targetHeight = requestedDstSize.height.pxOrElse { 240 }.coerceIn(128, 240)
+        // Cache miss: decode fresh thumbnail with concurrency cap to prevent scroll stutter
+        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 320 }, options.size.height.pxOrElse { 200 })
+        val targetWidth = requestedDstSize.width.pxOrElse { 320 }.coerceIn(160, 360)
+        val targetHeight = requestedDstSize.height.pxOrElse { 200 }.coerceIn(100, 240)
 
-        val rawBitmap: Bitmap = try {
-            MediaMetadataRetriever().use { nativeRetriever ->
-                nativeRetriever.setDataSource(source)
-
-                val embeddedPicture = nativeRetriever.embeddedPicture
-                val embeddedPictureBitmap = embeddedPicture?.let { pictureBytes ->
-                    val boundsOpts = BitmapFactory.Options().apply {
-                        inJustDecodeBounds = true
-                        inPreferredConfig = Bitmap.Config.RGB_565
-                    }
-                    BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, boundsOpts)
-                    val sampleSize = DecodeUtils.calculateInSampleSize(
-                        srcWidth = boundsOpts.outWidth,
-                        srcHeight = boundsOpts.outHeight,
-                        dstWidth = targetWidth,
-                        dstHeight = targetHeight,
-                        scale = options.scale,
+        val rawBitmap: Bitmap = thumbnailDecodeSemaphore.withPermit {
+            // Fast path on API 29+ for content:// URIs using OS MediaStore thumbnail cache
+            val metadata = source.metadata
+            if (SDK_INT >= 29 && metadata is ContentMetadata) {
+                runCatching {
+                    options.context.contentResolver.loadThumbnail(
+                        metadata.uri.toAndroidUri(),
+                        android.util.Size(targetWidth, targetHeight),
+                        null,
                     )
-                    val decodeOpts = BitmapFactory.Options().apply {
-                        inSampleSize = sampleSize
-                        inPreferredConfig = Bitmap.Config.RGB_565
-                    }
-                    BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, decodeOpts)
-                }
-
-                if (embeddedPictureBitmap != null) {
-                    embeddedPictureBitmap
-                } else {
-                    val videoDuration = nativeRetriever
-                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                        ?.toLongOrNull() ?: 0L
-
-                    val targetTimeUs = when (strategy) {
-                        is ThumbnailStrategy.FirstFrame -> 0L
-                        is ThumbnailStrategy.FrameAtPercentage -> (videoDuration * strategy.percentage * 1000).toLong()
-                        is ThumbnailStrategy.Hybrid -> (videoDuration * strategy.percentage * 1000).toLong().takeIf { it > 0 } ?: 0L
-                    }
-
-                    if (SDK_INT >= 27) {
-                        nativeRetriever.getScaledFrameAtTime(
-                            targetTimeUs,
-                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
-                            targetWidth,
-                            targetHeight,
-                        ) ?: nativeRetriever.getFrameAtTime(targetTimeUs)
-                    } else {
-                        nativeRetriever.getFrameAtTime(targetTimeUs)
-                    } ?: throw IllegalStateException("Native frame extraction returned null")
-                }
+                }.getOrNull()?.let { return@withPermit it }
             }
-        } catch (_: Exception) {
-            // Fallback to FFmpeg retriever only when native decoder fails
-            MediaThumbnailRetriever().use { ffmpegRetriever ->
-                ffmpegRetriever.setDataSource(source)
-                val embedded = ffmpegRetriever.getEmbeddedPicture()
-                if (embedded != null) {
-                    BitmapFactory.decodeByteArray(embedded, 0, embedded.size)
-                } else {
-                    ffmpegRetriever.getFrameAtTime(0)
+
+            try {
+                MediaMetadataRetriever().use { nativeRetriever ->
+                    nativeRetriever.setDataSource(source)
+
+                    val embeddedPicture = nativeRetriever.embeddedPicture
+                    val embeddedPictureBitmap = embeddedPicture?.let { pictureBytes ->
+                        val boundsOpts = BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
+                            inPreferredConfig = Bitmap.Config.RGB_565
+                        }
+                        BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, boundsOpts)
+                        val sampleSize = DecodeUtils.calculateInSampleSize(
+                            srcWidth = boundsOpts.outWidth,
+                            srcHeight = boundsOpts.outHeight,
+                            dstWidth = targetWidth,
+                            dstHeight = targetHeight,
+                            scale = options.scale,
+                        )
+                        val decodeOpts = BitmapFactory.Options().apply {
+                            inSampleSize = sampleSize
+                            inPreferredConfig = Bitmap.Config.RGB_565
+                        }
+                        BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, decodeOpts)
+                    }
+
+                    if (embeddedPictureBitmap != null) {
+                        embeddedPictureBitmap
+                    } else {
+                        val videoDuration = nativeRetriever
+                            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            ?.toLongOrNull() ?: 0L
+
+                        val targetTimeUs = when (strategy) {
+                            is ThumbnailStrategy.FirstFrame -> 0L
+                            is ThumbnailStrategy.FrameAtPercentage -> (videoDuration * strategy.percentage * 1000).toLong()
+                            is ThumbnailStrategy.Hybrid -> (videoDuration * strategy.percentage * 1000).toLong().takeIf { it > 0 } ?: 0L
+                        }
+
+                        if (SDK_INT >= 27) {
+                            nativeRetriever.getScaledFrameAtTime(
+                                targetTimeUs,
+                                MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                                targetWidth,
+                                targetHeight,
+                            ) ?: nativeRetriever.getFrameAtTime(targetTimeUs)
+                        } else {
+                            nativeRetriever.getFrameAtTime(targetTimeUs)
+                        } ?: throw IllegalStateException("Native frame extraction returned null")
+                    }
                 }
-            } ?: throw IllegalStateException("Failed to get video thumbnail.")
+            } catch (_: Exception) {
+                // Fallback to FFmpeg retriever only when native decoder fails
+                MediaThumbnailRetriever().use { ffmpegRetriever ->
+                    ffmpegRetriever.setDataSource(source)
+                    val embedded = ffmpegRetriever.getEmbeddedPicture()
+                    if (embedded != null) {
+                        BitmapFactory.decodeByteArray(embedded, 0, embedded.size)
+                    } else {
+                        ffmpegRetriever.getFrameAtTime(0)
+                    }
+                } ?: throw IllegalStateException("Failed to get video thumbnail.")
+            }
         }
 
         val srcWidth = rawBitmap.width
         val srcHeight = rawBitmap.height
-        val dstSize = computeDstSize(srcWidth, srcHeight)
+        val dstSize = Size(targetWidth, targetHeight)
         val scaledBitmap = normalizeBitmap(
             inBitmap = rawBitmap,
             srcWidth = srcWidth,
@@ -184,14 +170,7 @@ class VideoThumbnailDecoder(
 
         return@withContext DecodeResult(
             image = scaledBitmap.toDrawable(options.context.resources).asImage(),
-            isSampled = DecodeUtils.computeSizeMultiplier(
-                srcWidth = srcWidth,
-                srcHeight = srcHeight,
-                dstWidth = scaledBitmap.width,
-                dstHeight = scaledBitmap.height,
-                scale = options.scale,
-                maxSize = options.maxBitmapSize,
-            ) < 1.0,
+            isSampled = true,
         )
     }
 

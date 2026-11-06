@@ -108,10 +108,14 @@ fun VideoListItem(
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
 ) {
-    val path = video.path.substringBeforeLast("/")
+    val path = remember(video.path) { video.path.substringBeforeLast("/") }
+    val realQuality = remember(video.width, video.height) {
+        val shortEdge = if (video.width > 0 && video.height > 0) minOf(video.width, video.height) else video.height
+        if (shortEdge > 0) "${shortEdge}p" else ""
+    }
     val showPath = preferences.showPathField && path.isNotBlank()
     val showSize = preferences.showSizeField && video.size > 0 && video.formattedFileSize.isNotBlank()
-    val showResolution = preferences.showResolutionField && video.height > 0
+    val showResolution = preferences.showResolutionField && realQuality.isNotEmpty()
 
     NextSegmentedListItem(
         modifier = modifier,
@@ -174,7 +178,7 @@ fun VideoListItem(
                                 InfoChip(text = video.formattedFileSize)
                             }
                             if (showResolution) {
-                                InfoChip(text = "${video.height}p")
+                                InfoChip(text = realQuality)
                             }
                         }
                     }
@@ -201,7 +205,7 @@ fun VideoGridItem(
     onLongClick: (() -> Unit)? = null,
 ) {
     NextSegmentedListItem(
-        modifier = modifier.width(IntrinsicSize.Min),
+        modifier = modifier,
         selected = selected,
         contentPadding = PaddingValues(8.dp),
         colors = ListItemDefaults.segmentedColors(
@@ -264,6 +268,10 @@ private fun ThumbnailView(
     val isNew = remember(video.dateAdded, video.lastPlayedAt, preferences.newVideoThresholdDays) {
         video.isNew(thresholdDays = preferences.newVideoThresholdDays)
     }
+    val realQuality = remember(video.width, video.height) {
+        val shortEdge = if (video.width > 0 && video.height > 0) minOf(video.width, video.height) else video.height
+        if (shortEdge > 0) "${shortEdge}p" else ""
+    }
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
@@ -282,6 +290,8 @@ private fun ThumbnailView(
             val imageRequest = remember(video.uriString) {
                 ImageRequest.Builder(context)
                     .data(video.uriString)
+                    .size(320, 200)
+                    .precision(coil3.size.Precision.INEXACT)
                     .memoryCacheKey(video.uriString)
                     .diskCacheKey(video.uriString)
                     .crossfade(false)
@@ -307,9 +317,9 @@ private fun ThumbnailView(
             )
         }
 
-        if (preferences.showResolutionField && video.height > 0) {
+        if (preferences.showResolutionField && realQuality.isNotEmpty()) {
             InfoChip(
-                text = "${video.height}p",
+                text = realQuality,
                 modifier = Modifier
                     .padding(5.dp)
                     .align(Alignment.BottomStart),

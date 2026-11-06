@@ -153,11 +153,12 @@
     <string name="video_decoder">Video decoder</string>
     <string name="audio_decoder">Audio decoder</string>
     <string name="decoder_mode_hardware">HW</string>
-    <string name="decoder_mode_system_software">SW+</string>
-    <string name="decoder_mode_app_software">SW</string>
-    <string name="decoder_hardware_description">Hardware MediaCodec decoders only</string>
-    <string name="decoder_system_software_description">Android software MediaCodec decoders only</string>
-    <string name="decoder_app_software_description">Bundled FFmpeg software decoder</string>
+    <string name="decoder_mode_system_software">SW</string>
+    <string name="decoder_mode_app_software">MPV</string>
+    <string name="decoder_hardware_description">Hardware MediaCodec decoder for maximum smoothness and battery life</string>
+    <string name="decoder_auto_description">Hybrid HW+ acceleration with automatic multi-core fallback</string>
+    <string name="decoder_system_software_description">Android system software MediaCodec decoder</string>
+    <string name="decoder_app_software_description">MPV / FFmpeg high-compatibility 10-bit &amp; multi-codec engine</string>
     <string name="video_decoder_mode_not_supported">%1$s video decoder is not supported</string>
     <string name="audio_decoder_mode_not_supported">%1$s audio decoder is not supported</string>
     <string name="no_supported_decoder">No supported decoder is available for this media.</string>
@@ -535,7 +536,7 @@
         <item quantity="one">%d video</item>
         <item quantity="other">%d videos</item>
     </plurals>
-    <string name="decoder_mode_auto">Auto</string>
+    <string name="decoder_mode_auto">HW+</string>
     <string name="settings_description">App preferences</string>
     <string name="more">More</string>
     <string name="new_label">NEW</string>
@@ -567,7 +568,14 @@
     <string name="subtitle_animation_none">None</string>
     <string name="subtitle_animation_fade">Fade</string>
     <string name="subtitle_animation_typewriter">Typewriter</string>
+    <string name="subtitle_animation_slide_up">Slide Up</string>
+    <string name="subtitle_animation_pop_in">Pop / Zoom In</string>
+    <string name="subtitle_animation_word_by_word">Word by Word</string>
+    <string name="subtitle_animation_slide_horizontal">Slide In</string>
+    <string name="subtitle_animation_bounce_drop">Bounce Drop</string>
     <string name="subtitle_bottom_padding">Subtitle Bottom Margin</string>
     <string name="mini_player">Mini Player</string>
     <string name="dismiss">Dismiss</string>
+    <string name="show_status_bar">Show status bar</string>
+    <string name="show_status_bar_description">Show system status bar when player controls are visible</string>
 </resources>

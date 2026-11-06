@@ -54,8 +54,10 @@ fun PlayerControls(
     middleControlsModifier: Modifier = Modifier,
 ) {
     val videoQualityBadge = remember(player?.videoSize) {
+        val w = player?.videoSize?.width ?: 0
         val h = player?.videoSize?.height ?: 0
-        if (h > 0) "${h}p" else null
+        val shortEdge = if (w > 0 && h > 0) minOf(w, h) else h
+        if (shortEdge > 0) "${shortEdge}p" else null
     }
 
     Box(

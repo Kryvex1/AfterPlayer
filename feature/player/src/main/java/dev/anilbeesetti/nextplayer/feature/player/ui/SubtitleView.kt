@@ -8,12 +8,19 @@ import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -164,25 +171,38 @@ private fun ComposeSubtitleRenderer(
         }
     }
 
-    var typewriterLength by remember(rawText, configuration.animation) { mutableIntStateOf(0) }
+    val words = remember(rawText) { rawText.split(Regex("\\s+")).filter { it.isNotEmpty() } }
+    var revealCount by remember(rawText, configuration.animation) { mutableIntStateOf(0) }
     LaunchedEffect(rawText, configuration.animation) {
-        if (configuration.animation == SubtitleAnimation.TYPEWRITER) {
-            typewriterLength = 0
-            val totalChars = rawText.length
-            val stepDelay = (400L / totalChars.coerceAtLeast(1)).coerceIn(15L, 50L)
-            for (i in 1..totalChars) {
-                typewriterLength = i
-                delay(stepDelay)
+        when (configuration.animation) {
+            SubtitleAnimation.TYPEWRITER -> {
+                revealCount = 0
+                val totalChars = rawText.length
+                val stepDelay = (400L / totalChars.coerceAtLeast(1)).coerceIn(15L, 50L)
+                for (i in 1..totalChars) {
+                    revealCount = i
+                    delay(stepDelay)
+                }
             }
-        } else {
-            typewriterLength = rawText.length
+            SubtitleAnimation.WORD_BY_WORD -> {
+                revealCount = 0
+                val totalWords = words.size
+                val stepDelay = (480L / totalWords.coerceAtLeast(1)).coerceIn(55L, 140L)
+                for (i in 1..totalWords) {
+                    revealCount = i
+                    delay(stepDelay)
+                }
+            }
+            else -> {
+                revealCount = rawText.length
+            }
         }
     }
 
-    val displayText = if (configuration.animation == SubtitleAnimation.TYPEWRITER) {
-        rawText.take(typewriterLength)
-    } else {
-        rawText
+    val displayText = when (configuration.animation) {
+        SubtitleAnimation.TYPEWRITER -> rawText.take(revealCount)
+        SubtitleAnimation.WORD_BY_WORD -> words.take(revealCount).joinToString(" ")
+        else -> rawText
     }
 
     val targetBottomPadding = if (configuration.controlsVisible && !isInPictureInPictureMode) {
@@ -203,28 +223,117 @@ private fun ComposeSubtitleRenderer(
             .padding(bottom = animatedBottomPadding),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        if (configuration.animation == SubtitleAnimation.FADE) {
-            AnimatedContent(
-                targetState = displayText,
-                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
-                label = "subtitle_fade",
-            ) { text ->
+        when (configuration.animation) {
+            SubtitleAnimation.FADE -> {
+                AnimatedContent(
+                    targetState = displayText,
+                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
+                    label = "subtitle_fade",
+                ) { text ->
+                    SubtitlePill(
+                        text = text,
+                        fontFamily = resolvedFontFamily,
+                        fontSize = targetSize,
+                        isBold = configuration.textBold,
+                        showBackground = configuration.showBackground,
+                    )
+                }
+            }
+            SubtitleAnimation.SLIDE_UP -> {
+                AnimatedContent(
+                    targetState = displayText,
+                    transitionSpec = {
+                        (slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it / 2 } + fadeIn(tween(180))) togetherWith
+                            (slideOutVertically(tween(160, easing = FastOutSlowInEasing)) { -it / 3 } + fadeOut(tween(140)))
+                    },
+                    label = "subtitle_slide_up",
+                ) { text ->
+                    SubtitlePill(
+                        text = text,
+                        fontFamily = resolvedFontFamily,
+                        fontSize = targetSize,
+                        isBold = configuration.textBold,
+                        showBackground = configuration.showBackground,
+                    )
+                }
+            }
+            SubtitleAnimation.POP_IN -> {
+                AnimatedContent(
+                    targetState = displayText,
+                    transitionSpec = {
+                        (scaleIn(
+                            initialScale = 0.72f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium,
+                            ),
+                        ) + fadeIn(tween(160))) togetherWith
+                            (scaleOut(targetScale = 0.85f, animationSpec = tween(140)) + fadeOut(tween(130)))
+                    },
+                    label = "subtitle_pop_in",
+                ) { text ->
+                    SubtitlePill(
+                        text = text,
+                        fontFamily = resolvedFontFamily,
+                        fontSize = targetSize,
+                        isBold = configuration.textBold,
+                        showBackground = configuration.showBackground,
+                    )
+                }
+            }
+            SubtitleAnimation.SLIDE_HORIZONTAL -> {
+                AnimatedContent(
+                    targetState = displayText,
+                    transitionSpec = {
+                        (slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 3 } + fadeIn(tween(180))) togetherWith
+                            (slideOutHorizontally(tween(160, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(140)))
+                    },
+                    label = "subtitle_slide_horizontal",
+                ) { text ->
+                    SubtitlePill(
+                        text = text,
+                        fontFamily = resolvedFontFamily,
+                        fontSize = targetSize,
+                        isBold = configuration.textBold,
+                        showBackground = configuration.showBackground,
+                    )
+                }
+            }
+            SubtitleAnimation.BOUNCE_DROP -> {
+                AnimatedContent(
+                    targetState = displayText,
+                    transitionSpec = {
+                        (slideInVertically(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                        ) { -it / 2 } + scaleIn(initialScale = 0.90f, animationSpec = tween(180)) + fadeIn(tween(160))) togetherWith
+                            (slideOutVertically(tween(150)) { it / 3 } + fadeOut(tween(130)))
+                    },
+                    label = "subtitle_bounce_drop",
+                ) { text ->
+                    SubtitlePill(
+                        text = text,
+                        fontFamily = resolvedFontFamily,
+                        fontSize = targetSize,
+                        isBold = configuration.textBold,
+                        showBackground = configuration.showBackground,
+                    )
+                }
+            }
+            SubtitleAnimation.NONE,
+            SubtitleAnimation.TYPEWRITER,
+            SubtitleAnimation.WORD_BY_WORD,
+            -> {
                 SubtitlePill(
-                    text = text,
+                    text = displayText,
                     fontFamily = resolvedFontFamily,
                     fontSize = targetSize,
                     isBold = configuration.textBold,
                     showBackground = configuration.showBackground,
                 )
             }
-        } else {
-            SubtitlePill(
-                text = displayText,
-                fontFamily = resolvedFontFamily,
-                fontSize = targetSize,
-                isBold = configuration.textBold,
-                showBackground = configuration.showBackground,
-            )
         }
     }
 }

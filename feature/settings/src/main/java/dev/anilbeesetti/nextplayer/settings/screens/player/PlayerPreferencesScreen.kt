@@ -91,12 +91,19 @@ private fun PlayerPreferencesScreenContent(
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
                 PreferenceSwitch(
+                    title = stringResource(id = R.string.show_status_bar),
+                    description = stringResource(id = R.string.show_status_bar_description),
+                    icon = NextIcons.Player,
+                    isChecked = state.preferences.showStatusBar,
+                    onClick = { onAction(PlayerPreferencesUiEvent.ToggleShowStatusBar) },
+                    isFirstItem = true,
+                )
+                PreferenceSwitch(
                     title = stringResource(id = R.string.material_you_controls),
                     description = stringResource(id = R.string.material_you_controls_description),
                     icon = NextIcons.Appearance,
                     isChecked = state.preferences.useMaterialYouControls,
                     onClick = { onAction(PlayerPreferencesUiEvent.ToggleUseMaterialYouControls) },
-                    isFirstItem = true,
                 )
                 PreferenceSlider(
                     title = stringResource(R.string.controller_timeout),

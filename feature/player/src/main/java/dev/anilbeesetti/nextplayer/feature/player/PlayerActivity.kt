@@ -115,6 +115,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestHighRefreshRate()
         isIntentNew = savedInstanceState?.getBoolean("isIntentNew", true) ?: true
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -149,15 +150,33 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    private fun requestHighRefreshRate() {
+        try {
+            val currentDisplay = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            } ?: return
+            val currentMode = currentDisplay.mode
+            val bestMode = currentDisplay.supportedModes
+                .filter { it.physicalWidth == currentMode.physicalWidth && it.physicalHeight == currentMode.physicalHeight }
+                .maxByOrNull { it.refreshRate }
+                ?: currentDisplay.supportedModes.maxByOrNull { it.refreshRate }
+                ?: return
+            window.attributes = window.attributes.apply {
+                preferredDisplayModeId = bestMode.modeId
+                preferredRefreshRate = bestMode.refreshRate
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     private fun playerOutput() = PlayerViewModel.Output(
         navigateUp = ::finishAndStopPlayerSession,
         selectSubtitle = ::selectSubtitle,
         selectAudio = ::selectAudio,
-        playInBackground = {
-            playInBackground = true
-            finish()
-            overridePendingTransition(0, android.R.anim.fade_out)
-        },
+        playInBackground = ::finishAndStopPlayerSession,
         setVideoDecoderMode = { mode ->
             lifecycleScope.launch { mediaController?.setVideoDecoderMode(mode) }
         },
@@ -219,13 +238,15 @@ class PlayerActivity : ComponentActivity() {
         mediaController?.run {
             viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady))
             removeListener(playbackStateListener)
-            val shouldPlayInBackground = playInBackground || playerPreferences.autoBackgroundPlay
-            if (subtitleFileSuspendLauncher.isAwaitingResult || audioFileSuspendLauncher.isAwaitingResult || !shouldPlayInBackground) {
+            val isAwaitingDocumentPicker = subtitleFileSuspendLauncher.isAwaitingResult || audioFileSuspendLauncher.isAwaitingResult
+            if (isAwaitingDocumentPicker) {
                 pause()
-            }
-            if (isInPictureInPictureMode) {
-                finish()
-                if (!shouldPlayInBackground) stopPlayerSession()
+            } else {
+                pause()
+                stopPlayerSession()
+                if (isInPictureInPictureMode) {
+                    finish()
+                }
             }
         }
         mediaController = null
@@ -272,7 +293,7 @@ class PlayerActivity : ComponentActivity() {
     private suspend fun playVideo(
         uri: Uri,
         playlistId: Long?,
-    ) = withContext(Dispatchers.Default) {
+    ) = withContext(Dispatchers.IO) {
         val savedQueue = playlistId
             ?.let { playlistRepository.getPlaylist(it) }
             ?.toMediaQueue(selectedUri = uri.toString())
@@ -297,30 +318,34 @@ class PlayerActivity : ComponentActivity() {
         }
 
         val mediaContentUri = getMediaContentUri(uri)
+        val folderVideos = mediaContentUri?.let { mediaUri ->
+            viewModel.getPlaylistFromUri(mediaUri)
+        }.orEmpty()
+        val videoTitlesByUri = folderVideos.associate { it.uriString to it.nameWithExtension }
         val playlist = playerApi.getPlaylist().takeIf { it.isNotEmpty() }
-            ?: mediaContentUri?.let { mediaUri ->
-                viewModel.getPlaylistFromUri(mediaUri)
-                    .map { it.uriString }
-                    .toMutableList()
-                    .apply {
-                        if (!contains(mediaUri.toString())) {
-                            add(index = 0, element = mediaUri.toString())
-                        }
+            ?: folderVideos
+                .map { it.uriString }
+                .toMutableList()
+                .apply {
+                    if (mediaContentUri != null && !contains(mediaContentUri.toString())) {
+                        add(index = 0, element = mediaContentUri.toString())
                     }
-            } ?: listOf(uri.toString())
+                }
+                .takeIf { it.isNotEmpty() }
+            ?: listOf(uri.toString())
 
         val mediaItemIndexToPlay = playlist.indexOfFirst {
             it == (mediaContentUri ?: uri).toString()
         }.takeIf { it >= 0 } ?: 0
 
-        val mediaItems = playlist.mapIndexed { index, uri ->
+        val mediaItems = playlist.mapIndexed { index, itemUri ->
             MediaItem.Builder().apply {
-                setUri(uri)
-                setMediaId(uri)
+                setUri(itemUri)
+                setMediaId(itemUri)
                 if (index == mediaItemIndexToPlay) {
                     setMediaMetadata(
                         MediaMetadata.Builder().apply {
-                            setTitle(playerApi.title)
+                            setTitle(playerApi.title ?: videoTitlesByUri[itemUri])
                             setExtras(positionMs = playerApi.position?.toLong())
                         }.build(),
                     )
@@ -332,6 +357,12 @@ class PlayerActivity : ComponentActivity() {
                         )
                     }
                     setSubtitleConfigurations(apiSubs)
+                } else {
+                    videoTitlesByUri[itemUri]?.let { knownTitle ->
+                        setMediaMetadata(
+                            MediaMetadata.Builder().setTitle(knownTitle).build(),
+                        )
+                    }
                 }
             }.build()
         }

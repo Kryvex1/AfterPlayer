@@ -79,9 +79,7 @@ import dev.anilbeesetti.nextplayer.navigation.navigationTransition
 import dev.anilbeesetti.nextplayer.navigation.networkNavGraph
 import dev.anilbeesetti.nextplayer.navigation.playlistNavGraph
 import dev.anilbeesetti.nextplayer.navigation.rememberTopLevelNavState
-import dev.anilbeesetti.nextplayer.feature.player.state.rememberMediaController
 import dev.anilbeesetti.nextplayer.navigation.settingsNavGraph
-import dev.anilbeesetti.nextplayer.ui.InAppMiniPlayer
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -96,6 +94,7 @@ class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestHighRefreshRate()
         systemService.initialize(this@MainActivity)
         mediaOperationsService.initialize(this@MainActivity)
 
@@ -148,6 +147,22 @@ class MainActivity : FragmentActivity() {
 
                     val topLevelFabStates = remember { mutableStateMapOf<String, TopLevelFabState>() }
                     var showTopLevelBottomBar by remember { mutableStateOf(true) }
+                    val bottomBarVisibleSetter: (Boolean) -> Unit = remember {
+                        { visible: Boolean ->
+                            if (showTopLevelBottomBar != visible) {
+                                showTopLevelBottomBar = visible
+                            }
+                        }
+                    }
+                    val fabSetter: (String, TopLevelFabState?) -> Unit = remember {
+                        { key: String, fabState: TopLevelFabState? ->
+                            if (fabState == null) {
+                                topLevelFabStates.remove(key)
+                            } else {
+                                topLevelFabStates[key] = fabState
+                            }
+                        }
+                    }
                     NavigationLayout(
                         state = navState,
                         fabStates = topLevelFabStates,
@@ -167,26 +182,42 @@ class MainActivity : FragmentActivity() {
                         }
                         CompositionLocalProvider(
                             LocalNavigationBottomPadding provides layoutPaddingValues.calculateBottomPadding(),
-                            LocalTopLevelBottomBarVisibleSetter provides { showTopLevelBottomBar = it },
-                            LocalTopLevelFabSetter provides { key, state ->
-                                if (state == null) {
-                                    topLevelFabStates.remove(key)
-                                } else {
-                                    topLevelFabStates[key] = state
-                                }
-                            },
+                            LocalTopLevelBottomBarVisibleSetter provides bottomBarVisibleSetter,
+                            LocalTopLevelFabSetter provides fabSetter,
                         ) {
                             NavDisplay(
                                 entries = navState.rememberEntries(provider, navigationInsetsDecorator),
                                 onBack = { navState.goBack() },
-                                transitionSpec = { navState.navigationTransition(initialState, targetState) },
-                                popTransitionSpec = { navState.navigationTransition(initialState, targetState) },
-                                predictivePopTransitionSpec = { navState.navigationTransition(initialState, targetState) },
+                                transitionSpec = { navState.navigationTransition(initialState, targetState, isPop = false) },
+                                popTransitionSpec = { navState.navigationTransition(initialState, targetState, isPop = true) },
+                                predictivePopTransitionSpec = { navState.navigationTransition(initialState, targetState, isPop = true) },
                             )
                         }
                     }
                 }
             }
+        }
+    }
+
+    private fun requestHighRefreshRate() {
+        try {
+            val currentDisplay = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            } ?: return
+            val currentMode = currentDisplay.mode
+            val bestMode = currentDisplay.supportedModes
+                .filter { it.physicalWidth == currentMode.physicalWidth && it.physicalHeight == currentMode.physicalHeight }
+                .maxByOrNull { it.refreshRate }
+                ?: currentDisplay.supportedModes.maxByOrNull { it.refreshRate }
+                ?: return
+            window.attributes = window.attributes.apply {
+                preferredDisplayModeId = bestMode.modeId
+                preferredRefreshRate = bestMode.refreshRate
+            }
+        } catch (_: Exception) {
         }
     }
 }
@@ -212,8 +243,6 @@ fun NavigationLayout(
     LaunchedEffect(selectedFabState) {
         selectedFabState?.let { displayedFabState = it }
     }
-
-    val mediaController = rememberMediaController()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(

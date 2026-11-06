@@ -2,16 +2,13 @@ package dev.anilbeesetti.nextplayer.feature.player
 
 import android.content.res.Configuration
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -26,11 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.unit.dp
-import dev.anilbeesetti.nextplayer.feature.player.extensions.noRippleClickable
-import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,6 +33,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
+import dev.anilbeesetti.nextplayer.feature.player.extensions.noRippleClickable
+import dev.anilbeesetti.nextplayer.feature.player.extensions.toggleSystemBars
 import dev.anilbeesetti.nextplayer.feature.player.state.ControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.state.PlayerOrientationEffect
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberBrightnessState
@@ -49,6 +46,7 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberTapGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVideoZoomAndContentScaleState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightnessGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeState
+import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerErrorDialogs
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestures
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerVerticalGestureIndicators
@@ -97,10 +95,19 @@ internal fun MediaPlayerContent(
         return
     }
     val context = LocalContext.current
+    val activity = LocalActivity.current
     val controlsVisibilityState = rememberControlsVisibilityState(
         player = player,
         hideAfter = playerPreferences.controllerAutoHideTimeout.seconds,
     )
+    if (!isPreview) {
+        LaunchedEffect(controlsVisibilityState.controlsVisible, playerPreferences.showStatusBar) {
+            activity?.toggleSystemBars(
+                showBars = controlsVisibilityState.controlsVisible && playerPreferences.showStatusBar,
+                types = WindowInsetsCompat.Type.statusBars(),
+            )
+        }
+    }
     val tapGestureState = rememberTapGestureState(
         player = player,
         doubleTapGesture = playerPreferences.doubleTapGesture,
@@ -128,27 +135,6 @@ internal fun MediaPlayerContent(
         enablePanGesture = playerPreferences.enablePanGesture,
         onEvent = { onAction(PlayerAction.OnVideoZoomEvent(it)) },
     )
-    var isMinimizing by remember { mutableStateOf(false) }
-    val minimizeScale by animateFloatAsState(
-        targetValue = if (isMinimizing) 0.38f else 1f,
-        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
-        label = "minimize_scale",
-    )
-    val minimizeAlpha by animateFloatAsState(
-        targetValue = if (isMinimizing) 0f else 1f,
-        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-        label = "minimize_alpha",
-    )
-    val minimizeOffsetY by animateDpAsState(
-        targetValue = if (isMinimizing) 420.dp else 0.dp,
-        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
-        label = "minimize_offset_y",
-        finishedListener = {
-            if (isMinimizing) {
-                onAction(PlayerAction.PlayInBackground)
-            }
-        },
-    )
 
     val brightnessState = if (!isPreview) rememberBrightnessState() else null
     val volumeAndBrightnessGestureState = if (volumeState != null && brightnessState != null) {
@@ -159,11 +145,6 @@ internal fun MediaPlayerContent(
             enableBrightnessGesture = playerPreferences.enableBrightnessSwipeGesture,
             volumeGestureSensitivity = playerPreferences.volumeGestureSensitivity,
             brightnessGestureSensitivity = playerPreferences.brightnessGestureSensitivity,
-            onMinimize = {
-                if (!isMinimizing) {
-                    isMinimizing = true
-                }
-            },
         )
     } else {
         null
@@ -208,13 +189,6 @@ internal fun MediaPlayerContent(
     Box(
         Modifier
             .fillMaxSize()
-            .graphicsLayer {
-                scaleX = minimizeScale
-                scaleY = minimizeScale
-                alpha = minimizeAlpha
-                translationY = minimizeOffsetY.toPx()
-            }
-            .clip(RoundedCornerShape((if (isMinimizing) 14 else 0).dp))
             .background(Color.Black),
     ) {
         if (pictureInPictureState != null) {

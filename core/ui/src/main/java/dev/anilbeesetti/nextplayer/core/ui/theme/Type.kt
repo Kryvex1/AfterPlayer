@@ -12,14 +12,26 @@ val SFProMediumFontFamily = FontFamily(
     Font(R.font.sf_pro_medium, FontWeight.Light),
     Font(R.font.sf_pro_medium, FontWeight.Normal),
     Font(R.font.sf_pro_medium, FontWeight.Medium),
+    Font(R.font.sf_pro_bold, FontWeight.SemiBold),
+    Font(R.font.sf_pro_bold, FontWeight.Bold),
+    Font(R.font.kohinoor_devanagari, FontWeight.Light),
     Font(R.font.kohinoor_devanagari, FontWeight.Normal),
+    Font(R.font.kohinoor_devanagari, FontWeight.Medium),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.SemiBold),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.Bold),
 )
 
 val SFProBoldFontFamily = FontFamily(
+    Font(R.font.sf_pro_medium, FontWeight.Normal),
+    Font(R.font.sf_pro_bold, FontWeight.Medium),
     Font(R.font.sf_pro_bold, FontWeight.SemiBold),
     Font(R.font.sf_pro_bold, FontWeight.Bold),
     Font(R.font.sf_pro_bold, FontWeight.ExtraBold),
+    Font(R.font.kohinoor_devanagari, FontWeight.Normal),
+    Font(R.font.kohinoor_devanagari, FontWeight.Medium),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.SemiBold),
     Font(R.font.kohinoor_devanagari_bold, FontWeight.Bold),
+    Font(R.font.kohinoor_devanagari_bold, FontWeight.ExtraBold),
 )
 
 val KohinoorDevanagariFontFamily = FontFamily(

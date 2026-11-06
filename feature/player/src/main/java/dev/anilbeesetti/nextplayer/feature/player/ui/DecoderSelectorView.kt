@@ -1,5 +1,6 @@
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ fun BoxScope.DecoderSelectorView(
                 onTrackTypeSelected = { selectedTrackType = it },
             )
             DecoderModeGroup(
+                trackType = selectedTrackType,
                 selectedMode = when (selectedTrackType) {
                     DecoderTrackType.VIDEO -> videoMode
                     DecoderTrackType.AUDIO -> audioMode
@@ -109,14 +111,19 @@ private fun DecoderTrackTypeSelector(
 
 @Composable
 private fun DecoderModeGroup(
+    trackType: DecoderTrackType,
     selectedMode: DecoderMode?,
     onModeSelected: (DecoderMode) -> Unit,
 ) {
-    Column(modifier = Modifier.selectableGroup()) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         selectableDecoderModes.forEach { mode ->
             DecoderModeRow(
+                trackType = trackType,
                 mode = mode,
-                selected = mode == selectedMode,
+                selected = mode == (selectedMode ?: DecoderMode.AUTO),
                 onClick = { onModeSelected(mode) },
             )
         }
@@ -125,32 +132,70 @@ private fun DecoderModeGroup(
 
 @Composable
 private fun DecoderModeRow(
+    trackType: DecoderTrackType,
     mode: DecoderMode,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val titleColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val subtitleColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val titleText = if (trackType == DecoderTrackType.AUDIO) {
+        when (mode) {
+            DecoderMode.AUTO -> "Auto (Default)"
+            DecoderMode.HARDWARE -> "HW (System Audio)"
+            DecoderMode.SOFTWARE -> "SW (Android Codec)"
+            DecoderMode.FFMPEG -> "FFmpeg (Dolby / EAC3 / DTS)"
+        }
+    } else {
+        stringResource(mode.labelRes)
+    }
+    val descText = if (trackType == DecoderTrackType.AUDIO) {
+        when (mode) {
+            DecoderMode.AUTO -> "Automatically selects best hardware or FFmpeg audio decoder"
+            DecoderMode.HARDWARE -> "Direct device hardware audio decoder"
+            DecoderMode.SOFTWARE -> "Standard Android software audio decoder"
+            DecoderMode.FFMPEG -> "Built-in multi-channel audio engine for AC3, EAC3, DTS, AAC, TrueHD"
+        }
+    } else {
+        stringResource(mode.descriptionRes)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(containerColor)
             .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         RadioButton(
             selected = selected,
             onClick = null,
         )
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(mode.labelRes),
-                style = MaterialTheme.typography.titleMedium,
+                text = titleText,
+                style = MaterialTheme.typography.titleSmall,
+                color = titleColor,
             )
             Text(
-                text = stringResource(mode.descriptionRes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = descText,
+                style = MaterialTheme.typography.bodySmall,
+                color = subtitleColor,
             )
         }
     }
