@@ -1,17 +1,17 @@
 package dev.anilbeesetti.nextplayer.core.ui.composables
 
 import android.Manifest
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
+import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,15 +25,17 @@ import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.preview.DayNightPreview
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
-import androidx.core.net.toUri
 
 @Composable
 fun PermissionDetailView(
     text: String,
+    onRequestPermissionClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -42,25 +44,31 @@ fun PermissionDetailView(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 5.dp),
         )
         Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 5.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.height(10.dp))
-        Button(
-            onClick = {
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = ("package:" + context.packageName).toUri()
-                    context.startActivity(this)
-                }
-            },
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = stringResource(R.string.open_settings))
+            OutlinedButton(
+                onClick = {
+                    (context as? Activity)?.finishAffinity()
+                },
+            ) {
+                Text(text = stringResource(R.string.exit))
+            }
+            Button(
+                onClick = onRequestPermissionClick,
+            ) {
+                Text(text = stringResource(R.string.grant_permission))
+            }
         }
     }
 }
@@ -72,7 +80,7 @@ fun PermissionDetailViewPreview() {
         Surface {
             PermissionDetailView(
                 text = stringResource(
-                    id = R.string.permission_settings,
+                    id = R.string.permission_info,
                     Manifest.permission.READ_EXTERNAL_STORAGE,
                 ),
             )

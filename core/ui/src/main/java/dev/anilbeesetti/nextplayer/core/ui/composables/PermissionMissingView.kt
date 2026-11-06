@@ -26,9 +26,10 @@ fun PermissionMissingView(
     } else {
         PermissionDetailView(
             text = stringResource(
-                id = R.string.permission_settings,
+                id = R.string.permission_info,
                 permission,
             ),
+            onRequestPermissionClick = launchPermissionRequest,
         )
 
         LaunchedEffect(Unit) {

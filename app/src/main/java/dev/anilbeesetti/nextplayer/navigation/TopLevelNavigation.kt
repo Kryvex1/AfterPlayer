@@ -315,14 +315,14 @@ fun NextNavigationBar(
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.88f),
                         ),
                     ),
                 )
             }
             .navigationBarsPadding()
             .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-            .padding(bottom = 12.dp)
+            .padding(bottom = 12.dp, top = 6.dp)
             .padding(horizontal = 16.dp)
             .thenIf(condition = !showFabOnly) {
                 pointerInput(Unit) {}
@@ -347,32 +347,34 @@ fun NextNavigationBar(
                 FloatingActionButton(
                     onClick = fab.onClick,
                     modifier = Modifier
+                        .size(56.dp)
                         .testTag("top_level_fab")
                         .focusRequester(fabFocusRequester)
-                        .tvFocusRing(shape = RoundedCornerShape(18.dp))
+                        .tvFocusRing(shape = RoundedCornerShape(20.dp))
                         .focusProperties {
                             if (isTv) {
                                 up = fab.upFocusRequester.takeUnless { it == FocusRequester.Default }
                                     ?: contentFocusRequester
                             }
                         },
-                    shape = RoundedCornerShape(18.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ) {
                     AnimatedContent(
                         targetState = fab.icon,
                         transitionSpec = {
-                            fadeIn(tween(220, easing = FastOutSlowInEasing)) +
-                                scaleIn(tween(220, easing = FastOutSlowInEasing), initialScale = 0.4f) togetherWith
-                                fadeOut(tween(180, easing = FastOutSlowInEasing)) +
-                                scaleOut(tween(180, easing = FastOutSlowInEasing), targetScale = 0.4f)
+                            fadeIn(tween(200, easing = FastOutSlowInEasing)) +
+                                scaleIn(tween(200, easing = FastOutSlowInEasing), initialScale = 0.5f) togetherWith
+                                fadeOut(tween(150, easing = FastOutSlowInEasing)) +
+                                scaleOut(tween(150, easing = FastOutSlowInEasing), targetScale = 0.5f)
                         },
                         label = "fab_icon_swap",
                     ) { icon ->
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
+                            modifier = Modifier.size(26.dp),
                         )
                     }
                 }
@@ -389,30 +391,17 @@ fun NavigationView(
     onDestinationClick: (TopLevelDestination) -> Unit,
 ) {
     val selectedIndex = destinations.indexOfFirst { isSelected(it) }.coerceAtLeast(0)
-    val tabWidth = 56.dp
-    val tabHeight = 48.dp
-    val spacing = 2.dp
-
-    val animatedOffset by animateDpAsState(
-        targetValue = (tabWidth + spacing) * selectedIndex,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMedium,
-            dampingRatio = Spring.DampingRatioNoBouncy,
-        ),
-        label = "nav_pill_slide",
-    )
-
     val colorScheme = MaterialTheme.colorScheme
-    val containerBg = colorScheme.surfaceContainerHigh
-    val pillBg = colorScheme.primaryContainer
-    val borderColor = colorScheme.outlineVariant.copy(alpha = 0.55f)
-    val activeContentColor = colorScheme.onPrimaryContainer
+    val containerBg = colorScheme.surfaceContainerHighest.copy(alpha = 0.96f)
+    val borderColor = colorScheme.outlineVariant.copy(alpha = 0.45f)
+    val activePillBg = colorScheme.primary
+    val activeContentColor = colorScheme.onPrimary
     val inactiveContentColor = colorScheme.onSurfaceVariant
 
     Box(
         modifier = modifier
             .graphicsLayer(
-                shadowElevation = with(LocalDensity.current) { 6.dp.toPx() },
+                shadowElevation = with(LocalDensity.current) { 10.dp.toPx() },
                 shape = CircleShape,
             )
             .clip(CircleShape)
@@ -421,34 +410,38 @@ fun NavigationView(
                 border = BorderStroke(1.dp, borderColor),
                 shape = CircleShape,
             )
-            .padding(4.dp),
+            .padding(horizontal = 6.dp, vertical = 5.dp),
     ) {
-        // Sliding pill translated purely on the RenderThread (zero layout passes per frame)
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    translationX = animatedOffset.toPx()
-                }
-                .size(width = tabWidth, height = tabHeight)
-                .clip(CircleShape)
-                .background(pillBg),
-        )
-
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(spacing),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             destinations.forEachIndexed { index, destination ->
                 val selected = index == selectedIndex
+                val pillColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (selected) activePillBg else Color.Transparent,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                    label = "tab_pill_bg_$index",
+                )
                 val contentColor by androidx.compose.animation.animateColorAsState(
                     targetValue = if (selected) activeContentColor else inactiveContentColor,
                     animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                     label = "tab_content_$index",
                 )
+                val iconScale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (selected) 1.08f else 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                    label = "tab_scale_$index",
+                )
+                val labelText = stringResource(destination.labelRes)
+
                 Box(
                     modifier = Modifier
-                        .size(width = tabWidth, height = tabHeight)
                         .clip(CircleShape)
+                        .background(pillColor)
                         .selectable(
                             selected = selected,
                             onClick = { onDestinationClick(destination) },
@@ -456,15 +449,49 @@ fun NavigationView(
                             indication = null,
                             interactionSource = null,
                         )
-                        .tvFocusRing(shape = RoundedCornerShape(99.dp)),
+                        .tvFocusRing(shape = RoundedCornerShape(99.dp))
+                        .padding(
+                            horizontal = if (selected) 14.dp else 12.dp,
+                            vertical = 10.dp,
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CompositionLocalProvider(LocalContentColor provides contentColor) {
-                        Icon(
-                            imageVector = destination.icon,
-                            contentDescription = stringResource(destination.labelRes),
-                            modifier = Modifier.size(24.dp),
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        CompositionLocalProvider(LocalContentColor provides contentColor) {
+                            Icon(
+                                imageVector = destination.icon,
+                                contentDescription = labelText,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .graphicsLayer {
+                                        scaleX = iconScale
+                                        scaleY = iconScale
+                                    },
+                            )
+                        }
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = selected,
+                            enter = fadeIn(tween(180)) + androidx.compose.animation.expandHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium,
+                                ),
+                            ),
+                            exit = fadeOut(tween(120)) + androidx.compose.animation.shrinkHorizontally(
+                                animationSpec = tween(150),
+                            ),
+                        ) {
+                            androidx.compose.material3.Text(
+                                text = labelText,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = contentColor,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }

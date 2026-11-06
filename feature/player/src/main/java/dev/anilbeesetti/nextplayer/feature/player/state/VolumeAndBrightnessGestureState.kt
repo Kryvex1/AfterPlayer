@@ -108,6 +108,17 @@ class VolumeAndBrightnessGestureState(
         }
     }
 
+    fun triggerVolumeKeyIndicator() {
+        activeGesture = VerticalGesture.VOLUME
+        job?.cancel()
+        job = coroutineScope.launch {
+            delay(1.seconds)
+            activeGesture = null
+            volumeChangePercentage = 0
+            brightnessChangePercentage = 0
+        }
+    }
+
     fun onDragEnd() {
         startingY = 0f
         startVolumePercentage = 0

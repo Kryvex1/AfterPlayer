@@ -74,6 +74,7 @@ class PlayerActivity : ComponentActivity() {
     val playerPreferences get() = viewModel.state.value.playerPreferences
 
     private val onWindowAttributesChangedListener = CopyOnWriteArrayList<Consumer<WindowManager.LayoutParams?>>()
+    private val onVolumeKeyPressedListener = CopyOnWriteArrayList<Consumer<Int>>()
 
     private var isPlaybackFinished = false
     private var playInBackground: Boolean = false
@@ -446,5 +447,34 @@ class PlayerActivity : ComponentActivity() {
 
     fun removeOnWindowAttributesChangedListener(listener: Consumer<WindowManager.LayoutParams?>) {
         onWindowAttributesChangedListener.remove(listener)
+    }
+
+    fun addOnVolumeKeyPressedListener(listener: Consumer<Int>) {
+        onVolumeKeyPressedListener.add(listener)
+    }
+
+    fun removeOnVolumeKeyPressedListener(listener: Consumer<Int>) {
+        onVolumeKeyPressedListener.remove(listener)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (onVolumeKeyPressedListener.isNotEmpty()) {
+                for (listener in onVolumeKeyPressedListener) {
+                    listener.accept(keyCode)
+                }
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (onVolumeKeyPressedListener.isNotEmpty()) {
+                return true
+            }
+        }
+        return super.onKeyUp(keyCode, event)
     }
 }

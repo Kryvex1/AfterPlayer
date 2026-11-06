@@ -25,6 +25,14 @@ class MainViewModel(
         }
     }
 
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            preferencesRepository.updateApplicationPreferences {
+                it.copy(hasCompletedOnboarding = true)
+            }
+        }
+    }
+
     // Application preferences are observed only; this view model has no input actions.
     override fun onAction(action: Nothing) = Unit
 }

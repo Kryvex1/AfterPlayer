@@ -165,11 +165,17 @@ class VolumeState(
     }
 
     private fun setSystemVolume(volume: Int, showVolumePanel: Boolean) {
-        val shouldShowUi = showVolumePanel || (showVolumePanelIfHeadsetIsOn && audioManager.isHeadsetOn)
+        val targetVolume = volume.coerceIn(0, systemMaxVolume)
+        if (audioManager.currentStreamVolume == targetVolume && !showVolumePanel) return
+        val flags = if (showVolumePanel && showVolumePanelIfHeadsetIsOn && audioManager.isHeadsetOn) {
+            AudioManager.FLAG_SHOW_UI
+        } else {
+            0
+        }
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
-            volume.coerceIn(0, systemMaxVolume),
-            if (shouldShowUi) AudioManager.FLAG_SHOW_UI else 0,
+            targetVolume,
+            flags,
         )
     }
 

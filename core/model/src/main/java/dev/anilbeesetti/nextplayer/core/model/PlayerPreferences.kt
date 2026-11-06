@@ -45,7 +45,7 @@ data class PlayerPreferences(
     val preferredAudioLanguage: String = "",
     val pauseOnHeadsetDisconnect: Boolean = true,
     val requireAudioFocus: Boolean = true,
-    val showSystemVolumePanel: Boolean = true,
+    val showSystemVolumePanel: Boolean = false,
     val enableVolumeBoost: Boolean = false,
 
     // Subtitle Preferences

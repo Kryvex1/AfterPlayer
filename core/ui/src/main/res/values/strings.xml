@@ -578,4 +578,13 @@
     <string name="dismiss">Dismiss</string>
     <string name="show_status_bar">Show status bar</string>
     <string name="show_status_bar_description">Show system status bar when player controls are visible</string>
+    <string name="onboarding_welcome_title">Welcome to After Player</string>
+    <string name="onboarding_welcome_subtitle">Experience ultra-smooth, high-frame-rate video playback with rich gesture controls, network streaming, and private vault protection.</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_permission_title">Media Access Required</string>
+    <string name="onboarding_permission_subtitle">Allow After Player to scan and play videos stored on your device seamlessly.</string>
+    <string name="onboarding_allow_permission">Allow Media Access</string>
+    <string name="onboarding_all_set_title">All Set!</string>
+    <string name="onboarding_all_set_subtitle">Your media library is ready. Dive into an effortless, cinema-grade playback experience.</string>
+    <string name="onboarding_open_app">Start Watching</string>
 </resources>

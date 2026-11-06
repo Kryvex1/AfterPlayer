@@ -154,6 +154,28 @@ internal fun MediaPlayerContent(
             player = player,
             screenOrientation = playerPreferences.playerScreenOrientation,
         )
+        val playerActivity = activity as? PlayerActivity
+        androidx.compose.runtime.DisposableEffect(playerActivity, volumeState, volumeAndBrightnessGestureState) {
+            if (playerActivity == null || volumeState == null) {
+                return@DisposableEffect onDispose {}
+            }
+            val listener = androidx.core.util.Consumer<Int> { keyCode ->
+                when (keyCode) {
+                    android.view.KeyEvent.KEYCODE_VOLUME_UP -> {
+                        volumeState.increaseVolume(showVolumePanel = false)
+                        volumeAndBrightnessGestureState?.triggerVolumeKeyIndicator()
+                    }
+                    android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                        volumeState.decreaseVolume(showVolumePanel = false)
+                        volumeAndBrightnessGestureState?.triggerVolumeKeyIndicator()
+                    }
+                }
+            }
+            playerActivity.addOnVolumeKeyPressedListener(listener)
+            onDispose {
+                playerActivity.removeOnVolumeKeyPressedListener(listener)
+            }
+        }
     }
     val errorState = rememberErrorState(player = player)
 
