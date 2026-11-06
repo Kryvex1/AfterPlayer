@@ -40,6 +40,12 @@ data class PlayerPreferences(
     val useMaterialYouControls: Boolean = false,
     val showRemainingTime: Boolean = false,
     val showStatusBar: Boolean = true,
+    val wavingTimeline: Boolean = false,
+
+    // MPV & Advanced Configuration
+    val mpvConfigStorageUri: String = "",
+    val mpvConf: String = DEFAULT_MPV_CONF,
+    val inputConf: String = DEFAULT_INPUT_CONF,
 
     // Audio Preferences
     val preferredAudioLanguage: String = "",
@@ -73,5 +79,7 @@ data class PlayerPreferences(
         const val DEFAULT_SUBTITLE_TEXT_SIZE = 16
         const val DEFAULT_SUBTITLE_BOTTOM_PADDING = 16
         const val DEFAULT_CONTROLLER_AUTO_HIDE_TIMEOUT = 4
+        const val DEFAULT_MPV_CONF = "alang=hi,hin,en,eng\nslang=hi,hin,en,eng\nhwdec=auto-safe"
+        const val DEFAULT_INPUT_CONF = "RIGHT seek 5\nLEFT seek -5\nUP add volume 5\nDOWN add volume -5"
     }
 }

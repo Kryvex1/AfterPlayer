@@ -49,6 +49,12 @@ fun NextDialog(
                             WindowManager.LayoutParams.WRAP_CONTENT,
                         )
                         window.setDimAmount(0.60f)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                            window.attributes = window.attributes.apply {
+                                blurBehindRadius = 36
+                            }
+                        }
                         window.setWindowAnimations(android.R.style.Animation_Dialog)
                     } catch (_: Exception) {
                     }

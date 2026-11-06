@@ -105,6 +105,12 @@ class MainActivity : FragmentActivity() {
         setContent {
             val state by viewModel.state.collectAsStateWithLifecycle()
             val shouldUseDarkTheme = shouldUseDarkTheme(state = state)
+            var showOnboarding by remember {
+                mutableStateOf(
+                    !this@MainActivity.isTelevision &&
+                        dev.anilbeesetti.nextplayer.onboarding.OnboardingManager.shouldShowOnboarding(this@MainActivity),
+                )
+            }
 
             LaunchedEffect(shouldUseDarkTheme) {
                 enableEdgeToEdge(
@@ -130,96 +136,75 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surfaceContainer,
                 ) {
-                    val context = LocalContext.current
-                    val isTv = remember { context.isTelevision }
-                    val isPermissionGranted = remember(state) {
-                        androidx.core.content.ContextCompat.checkSelfPermission(
-                            context,
-                            dev.anilbeesetti.nextplayer.core.common.storagePermission,
-                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                    }
-                    var onboardingCompletedInSession by remember { mutableStateOf(false) }
-                    val shouldShowOnboarding = when (val currentState = state) {
-                        MainActivityUiState.Loading -> false
-                        is MainActivityUiState.Success -> {
-                            !isTv &&
-                                !onboardingCompletedInSession &&
-                                !currentState.preferences.hasCompletedOnboarding &&
-                                !isPermissionGranted
-                        }
-                    }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (showOnboarding) {
+                            dev.anilbeesetti.nextplayer.onboarding.TelegramOnboardingScreen(
+                                onFinished = { showOnboarding = false },
+                            )
+                        } else {
+                            val navState = rememberTopLevelNavState()
 
-                    if (shouldShowOnboarding) {
-                        dev.anilbeesetti.nextplayer.ui.OnboardingScreen(
-                            isPermissionInitiallyGranted = isPermissionGranted,
-                            onOnboardingComplete = {
-                                onboardingCompletedInSession = true
-                                viewModel.completeOnboarding()
-                            },
-                        )
-                    } else {
-                        val navState = rememberTopLevelNavState()
+                            val mediaStack = navState.backStacks.getValue(TopLevelDestination.MEDIA.route)
+                            val playlistStack = navState.backStacks.getValue(TopLevelDestination.PLAYLISTS.route)
+                            val networkStack = navState.backStacks.getValue(TopLevelDestination.NETWORK.route)
+                            val moreStack = navState.backStacks.getValue(TopLevelDestination.MORE.route)
 
-                        val mediaStack = navState.backStacks.getValue(TopLevelDestination.MEDIA.route)
-                        val playlistStack = navState.backStacks.getValue(TopLevelDestination.PLAYLISTS.route)
-                        val networkStack = navState.backStacks.getValue(TopLevelDestination.NETWORK.route)
-                        val moreStack = navState.backStacks.getValue(TopLevelDestination.MORE.route)
-
-                        val provider = entryProvider {
-                            mediaNavGraph(context = this@MainActivity, backStack = mediaStack)
-                            playlistNavGraph(context = this@MainActivity, backStack = playlistStack)
-                            networkNavGraph(context = this@MainActivity, backStack = networkStack)
-                            moreNavGraph(context = this@MainActivity, backStack = moreStack)
-                            settingsNavGraph(backStack = navState.currentStack)
-                        }
-
-                        val topLevelFabStates = remember { mutableStateMapOf<String, TopLevelFabState>() }
-                        var showTopLevelBottomBar by remember { mutableStateOf(true) }
-                        val bottomBarVisibleSetter: (Boolean) -> Unit = remember {
-                            { visible: Boolean ->
-                                if (showTopLevelBottomBar != visible) {
-                                    showTopLevelBottomBar = visible
-                                }
+                            val provider = entryProvider {
+                                mediaNavGraph(context = this@MainActivity, backStack = mediaStack)
+                                playlistNavGraph(context = this@MainActivity, backStack = playlistStack)
+                                networkNavGraph(context = this@MainActivity, backStack = networkStack)
+                                moreNavGraph(context = this@MainActivity, backStack = moreStack)
+                                settingsNavGraph(backStack = navState.currentStack)
                             }
-                        }
-                        val fabSetter: (String, TopLevelFabState?) -> Unit = remember {
-                            { key: String, fabState: TopLevelFabState? ->
-                                if (fabState == null) {
-                                    topLevelFabStates.remove(key)
-                                } else {
-                                    topLevelFabStates[key] = fabState
-                                }
-                            }
-                        }
-                        NavigationLayout(
-                            state = navState,
-                            fabStates = topLevelFabStates,
-                            showBottomBar = showTopLevelBottomBar,
-                        ) { layoutPaddingValues ->
-                            val topLevelKeys = navState.topLevelContentKeys
-                            val navigationInsetsDecorator = remember(topLevelKeys) {
-                                NavEntryDecorator<NavKey> { entry ->
-                                    Box(
-                                        Modifier.thenIf(topLevelKeys.contains(entry.contentKey)) {
-                                            consumeWindowInsets(WindowInsets.displayCutout.only(WindowInsetsSides.Start))
-                                        },
-                                    ) {
-                                        entry.Content()
+
+                            val topLevelFabStates = remember { mutableStateMapOf<String, TopLevelFabState>() }
+                            var showTopLevelBottomBar by remember { mutableStateOf(true) }
+                            val bottomBarVisibleSetter: (Boolean) -> Unit = remember {
+                                { visible: Boolean ->
+                                    if (showTopLevelBottomBar != visible) {
+                                        showTopLevelBottomBar = visible
                                     }
                                 }
                             }
-                            CompositionLocalProvider(
-                                LocalNavigationBottomPadding provides layoutPaddingValues.calculateBottomPadding(),
-                                LocalTopLevelBottomBarVisibleSetter provides bottomBarVisibleSetter,
-                                LocalTopLevelFabSetter provides fabSetter,
-                            ) {
-                                NavDisplay(
-                                    entries = navState.rememberEntries(provider, navigationInsetsDecorator),
-                                    onBack = { navState.goBack() },
-                                    transitionSpec = { navState.navigationTransition(initialState, targetState, isPop = false) },
-                                    popTransitionSpec = { navState.navigationTransition(initialState, targetState, isPop = true) },
-                                    predictivePopTransitionSpec = { navState.navigationTransition(initialState, targetState, isPop = true) },
-                                )
+                            val fabSetter: (String, TopLevelFabState?) -> Unit = remember {
+                                { key: String, fabState: TopLevelFabState? ->
+                                    if (fabState == null) {
+                                        topLevelFabStates.remove(key)
+                                    } else {
+                                        topLevelFabStates[key] = fabState
+                                    }
+                                }
+                            }
+                            NavigationLayout(
+                                state = navState,
+                                fabStates = topLevelFabStates,
+                                showBottomBar = showTopLevelBottomBar,
+                            ) { layoutPaddingValues ->
+                                val topLevelKeys = navState.topLevelContentKeys
+                                val navigationInsetsDecorator = remember(topLevelKeys) {
+                                    NavEntryDecorator<NavKey> { entry ->
+                                        Box(
+                                            Modifier.thenIf(topLevelKeys.contains(entry.contentKey)) {
+                                                consumeWindowInsets(WindowInsets.displayCutout.only(WindowInsetsSides.Start))
+                                            },
+                                        ) {
+                                            entry.Content()
+                                        }
+                                    }
+                                }
+                                CompositionLocalProvider(
+                                    LocalNavigationBottomPadding provides layoutPaddingValues.calculateBottomPadding(),
+                                    LocalTopLevelBottomBarVisibleSetter provides bottomBarVisibleSetter,
+                                    LocalTopLevelFabSetter provides fabSetter,
+                                ) {
+                                    NavDisplay(
+                                        entries = navState.rememberEntries(provider, navigationInsetsDecorator),
+                                        onBack = { navState.goBack() },
+                                        transitionSpec = { navState.navigationTransition(initialState, targetState, isPop = false) },
+                                        popTransitionSpec = { navState.navigationTransition(initialState, targetState, isPop = true) },
+                                        predictivePopTransitionSpec = { navState.navigationTransition(initialState, targetState, isPop = true) },
+                                    )
+                                }
                             }
                         }
                     }

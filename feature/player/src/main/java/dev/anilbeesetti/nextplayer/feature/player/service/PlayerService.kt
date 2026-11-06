@@ -722,11 +722,12 @@ class PlayerService : MediaSessionService() {
         val renderersFactory = NextRenderersFactory(applicationContext).setDecoderManager(decoderManager)
 
         trackSelector = DefaultTrackSelector(applicationContext).apply {
-            setParameters(
-                buildUponParameters()
-                    .setPreferredAudioLanguage(playerPreferences.preferredAudioLanguage)
-                    .setPreferredTextLanguage(playerPreferences.preferredSubtitleLanguage),
-            )
+            applyMpvLanguagePreferences(playerPreferences)
+        }
+        serviceScope.launch {
+            preferencesRepository.playerPreferences.collect { prefs ->
+                trackSelector.applyMpvLanguagePreferences(prefs)
+            }
         }
 
         val loadControl = DefaultLoadControl.Builder()
@@ -823,6 +824,33 @@ class PlayerService : MediaSessionService() {
         // lifetime of the process after playback ends.
         runBlocking { dataSourceFactory.release() }
         serviceScope.cancel()
+    }
+
+    private fun DefaultTrackSelector.applyMpvLanguagePreferences(prefs: PlayerPreferences) {
+        fun parseLangList(key: String, fallback: String): Array<String> {
+            val line = prefs.mpvConf.lineSequence()
+                .map { it.substringBefore("#").trim() }
+                .firstOrNull { it.startsWith("$key=", ignoreCase = true) }
+            val fromMpv = line?.substringAfter("=")
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
+            val combined = buildList {
+                if (fallback.isNotBlank()) add(fallback.trim())
+                addAll(fromMpv)
+            }.distinct()
+            return combined.toTypedArray()
+        }
+
+        val audioLangs = parseLangList("alang", prefs.preferredAudioLanguage)
+        val subLangs = parseLangList("slang", prefs.preferredSubtitleLanguage)
+
+        setParameters(
+            buildUponParameters()
+                .setPreferredAudioLanguages(*audioLangs)
+                .setPreferredTextLanguages(*subLangs),
+        )
     }
 
     private fun Long.validDurationOrNull(): Long? = takeIf { it != C.TIME_UNSET && it >= 0 }

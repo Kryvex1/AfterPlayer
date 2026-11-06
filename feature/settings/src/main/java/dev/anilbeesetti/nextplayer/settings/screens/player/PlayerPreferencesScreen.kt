@@ -99,6 +99,13 @@ private fun PlayerPreferencesScreenContent(
                     isFirstItem = true,
                 )
                 PreferenceSwitch(
+                    title = stringResource(id = R.string.waving_timeline),
+                    description = stringResource(id = R.string.waving_timeline_description),
+                    icon = NextIcons.Length,
+                    isChecked = state.preferences.wavingTimeline,
+                    onClick = { onAction(PlayerPreferencesUiEvent.ToggleWavingTimeline) },
+                )
+                PreferenceSwitch(
                     title = stringResource(id = R.string.material_you_controls),
                     description = stringResource(id = R.string.material_you_controls_description),
                     icon = NextIcons.Appearance,

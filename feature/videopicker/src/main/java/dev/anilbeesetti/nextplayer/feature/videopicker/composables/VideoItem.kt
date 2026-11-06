@@ -290,11 +290,11 @@ private fun ThumbnailView(
             val imageRequest = remember(video.uriString) {
                 ImageRequest.Builder(context)
                     .data(video.uriString)
-                    .size(320, 200)
+                    .size(640, 400)
                     .precision(coil3.size.Precision.INEXACT)
-                    .memoryCacheKey(video.uriString)
-                    .diskCacheKey(video.uriString)
-                    .crossfade(false)
+                    .memoryCacheKey("${video.uriString}_hq2")
+                    .diskCacheKey("${video.uriString}_hq2")
+                    .crossfade(120)
                     .build()
             }
             AsyncImage(

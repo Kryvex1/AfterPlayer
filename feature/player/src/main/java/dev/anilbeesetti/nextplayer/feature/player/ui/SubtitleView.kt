@@ -2,12 +2,11 @@ package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -23,8 +22,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,7 +42,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat.getSystemService
-import androidx.core.content.res.ResourcesCompat
 import androidx.media3.common.Player
 import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
@@ -57,12 +56,9 @@ import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView as Media3SubtitleView
 import dev.anilbeesetti.nextplayer.core.model.Font
 import dev.anilbeesetti.nextplayer.core.model.SubtitleAnimation
-import dev.anilbeesetti.nextplayer.core.ui.R as CoreUiR
-import dev.anilbeesetti.nextplayer.core.ui.theme.CustomFontConfig
 import dev.anilbeesetti.nextplayer.core.ui.theme.KohinoorDevanagariFontFamily
 import dev.anilbeesetti.nextplayer.core.ui.theme.SFProBoldFontFamily
 import dev.anilbeesetti.nextplayer.core.ui.theme.SFProMediumFontFamily
-import dev.anilbeesetti.nextplayer.feature.player.extensions.toTypeface
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberCuesState
 import kotlinx.coroutines.delay
 
@@ -77,19 +73,10 @@ fun SubtitleView(
     val cuesState = rememberCuesState(player)
     val cues = cuesState.currentCues?.cues
 
-    val paddingFraction = if (configuration.controlsVisible && !isInPictureInPictureMode) {
-        (configuration.bottomPadding.toFloat() + 96f) / 400f
-    } else {
-        configuration.bottomPadding.toFloat() / 400f
-    }
+    val paddingFraction = configuration.bottomPadding.toFloat() / 400f
 
-    AnimatedVisibility(
-        visible = !configuration.controlsVisible || isInPictureInPictureMode,
-        enter = fadeIn(tween(200)),
-        exit = fadeOut(tween(200)),
-        modifier = modifier,
-    ) {
-        if (configuration.useSystemCaptionStyle) {
+    Box(modifier = modifier.fillMaxSize()) {
+        if (configuration.useSystemCaptionStyle && configuration.animation == SubtitleAnimation.NONE) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { context ->
@@ -141,15 +128,12 @@ private fun ComposeSubtitleRenderer(
     isInPictureInPictureMode: Boolean,
     configuration: SubtitleConfiguration,
 ) {
-    val context = LocalContext.current
     val screenConfig = LocalConfiguration.current
     val isPortrait = screenConfig.orientation == Configuration.ORIENTATION_PORTRAIT
 
     val rawText = remember(cues) {
         cues?.joinToString("\n") { it.text?.toString().orEmpty() }?.trim().orEmpty()
     }
-
-    if (rawText.isBlank()) return
 
     val targetSize = remember(configuration.textSize, isPortrait, isInPictureInPictureMode) {
         when {
@@ -174,20 +158,24 @@ private fun ComposeSubtitleRenderer(
     val words = remember(rawText) { rawText.split(Regex("\\s+")).filter { it.isNotEmpty() } }
     var revealCount by remember(rawText, configuration.animation) { mutableIntStateOf(0) }
     LaunchedEffect(rawText, configuration.animation) {
+        if (rawText.isBlank()) {
+            revealCount = 0
+            return@LaunchedEffect
+        }
         when (configuration.animation) {
             SubtitleAnimation.TYPEWRITER -> {
-                revealCount = 0
+                revealCount = 1
                 val totalChars = rawText.length
-                val stepDelay = (400L / totalChars.coerceAtLeast(1)).coerceIn(15L, 50L)
+                val stepDelay = (420L / totalChars.coerceAtLeast(1)).coerceIn(16L, 48L)
                 for (i in 1..totalChars) {
                     revealCount = i
                     delay(stepDelay)
                 }
             }
             SubtitleAnimation.WORD_BY_WORD -> {
-                revealCount = 0
+                revealCount = 1
                 val totalWords = words.size
-                val stepDelay = (480L / totalWords.coerceAtLeast(1)).coerceIn(55L, 140L)
+                val stepDelay = (500L / totalWords.coerceAtLeast(1)).coerceIn(60L, 140L)
                 for (i in 1..totalWords) {
                     revealCount = i
                     delay(stepDelay)
@@ -205,32 +193,28 @@ private fun ComposeSubtitleRenderer(
         else -> rawText
     }
 
-    val targetBottomPadding = if (configuration.controlsVisible && !isInPictureInPictureMode) {
-        (configuration.bottomPadding + 116).dp
-    } else {
-        configuration.bottomPadding.dp
-    }
+    val isVisible = (!configuration.controlsVisible || isInPictureInPictureMode) && rawText.isNotBlank()
 
-    val animatedBottomPadding by animateDpAsState(
-        targetValue = targetBottomPadding,
-        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-        label = "subtitle_bottom_padding",
-    )
-
+    // Subtitle stays at the user's configured bottom padding and disappears directly when controls appear, without sliding up
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(bottom = animatedBottomPadding),
+            .padding(bottom = configuration.bottomPadding.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
+        if (!isVisible) return@Box
         when (configuration.animation) {
             SubtitleAnimation.FADE -> {
                 AnimatedContent(
-                    targetState = displayText,
-                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
+                    targetState = rawText,
+                    transitionSpec = {
+                        fadeIn(tween(240, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(tween(180, easing = FastOutSlowInEasing)) using
+                            SizeTransform(clip = false)
+                    },
                     label = "subtitle_fade",
                 ) { text ->
-                    SubtitlePill(
+                    SubtitleOrSpacer(
                         text = text,
                         fontFamily = resolvedFontFamily,
                         fontSize = targetSize,
@@ -241,14 +225,23 @@ private fun ComposeSubtitleRenderer(
             }
             SubtitleAnimation.SLIDE_UP -> {
                 AnimatedContent(
-                    targetState = displayText,
+                    targetState = rawText,
                     transitionSpec = {
-                        (slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it / 2 } + fadeIn(tween(180))) togetherWith
-                            (slideOutVertically(tween(160, easing = FastOutSlowInEasing)) { -it / 3 } + fadeOut(tween(140)))
+                        (slideInVertically(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                        ) { fullHeight -> (fullHeight * 0.85f).toInt().coerceAtLeast(36) } +
+                            fadeIn(tween(220))) togetherWith
+                            (slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { fullHeight ->
+                                -(fullHeight * 0.45f).toInt().coerceAtLeast(20)
+                            } + fadeOut(tween(150))) using
+                            SizeTransform(clip = false)
                     },
                     label = "subtitle_slide_up",
                 ) { text ->
-                    SubtitlePill(
+                    SubtitleOrSpacer(
                         text = text,
                         fontFamily = resolvedFontFamily,
                         fontSize = targetSize,
@@ -259,20 +252,21 @@ private fun ComposeSubtitleRenderer(
             }
             SubtitleAnimation.POP_IN -> {
                 AnimatedContent(
-                    targetState = displayText,
+                    targetState = rawText,
                     transitionSpec = {
                         (scaleIn(
-                            initialScale = 0.72f,
+                            initialScale = 0.52f,
                             animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
                                 stiffness = Spring.StiffnessMedium,
                             ),
-                        ) + fadeIn(tween(160))) togetherWith
-                            (scaleOut(targetScale = 0.85f, animationSpec = tween(140)) + fadeOut(tween(130)))
+                        ) + fadeIn(tween(180))) togetherWith
+                            (scaleOut(targetScale = 0.78f, animationSpec = tween(150)) + fadeOut(tween(140))) using
+                            SizeTransform(clip = false)
                     },
                     label = "subtitle_pop_in",
                 ) { text ->
-                    SubtitlePill(
+                    SubtitleOrSpacer(
                         text = text,
                         fontFamily = resolvedFontFamily,
                         fontSize = targetSize,
@@ -283,14 +277,23 @@ private fun ComposeSubtitleRenderer(
             }
             SubtitleAnimation.SLIDE_HORIZONTAL -> {
                 AnimatedContent(
-                    targetState = displayText,
+                    targetState = rawText,
                     transitionSpec = {
-                        (slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 3 } + fadeIn(tween(180))) togetherWith
-                            (slideOutHorizontally(tween(160, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(140)))
+                        (slideInHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                        ) { fullWidth -> -(fullWidth * 0.65f).toInt().coerceAtLeast(60) } +
+                            fadeIn(tween(220))) togetherWith
+                            (slideOutHorizontally(tween(180, easing = FastOutSlowInEasing)) { fullWidth ->
+                                (fullWidth * 0.55f).toInt().coerceAtLeast(48)
+                            } + fadeOut(tween(150))) using
+                            SizeTransform(clip = false)
                     },
                     label = "subtitle_slide_horizontal",
                 ) { text ->
-                    SubtitlePill(
+                    SubtitleOrSpacer(
                         text = text,
                         fontFamily = resolvedFontFamily,
                         fontSize = targetSize,
@@ -301,19 +304,24 @@ private fun ComposeSubtitleRenderer(
             }
             SubtitleAnimation.BOUNCE_DROP -> {
                 AnimatedContent(
-                    targetState = displayText,
+                    targetState = rawText,
                     transitionSpec = {
                         (slideInVertically(
                             animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
                                 stiffness = Spring.StiffnessMediumLow,
                             ),
-                        ) { -it / 2 } + scaleIn(initialScale = 0.90f, animationSpec = tween(180)) + fadeIn(tween(160))) togetherWith
-                            (slideOutVertically(tween(150)) { it / 3 } + fadeOut(tween(130)))
+                        ) { fullHeight -> -(fullHeight * 1.15f).toInt().coerceAtLeast(48) } +
+                            scaleIn(initialScale = 0.84f, animationSpec = tween(200)) +
+                            fadeIn(tween(180))) togetherWith
+                            (slideOutVertically(tween(160)) { fullHeight ->
+                                (fullHeight * 0.45f).toInt().coerceAtLeast(24)
+                            } + fadeOut(tween(140))) using
+                            SizeTransform(clip = false)
                     },
                     label = "subtitle_bounce_drop",
                 ) { text ->
-                    SubtitlePill(
+                    SubtitleOrSpacer(
                         text = text,
                         fontFamily = resolvedFontFamily,
                         fontSize = targetSize,
@@ -322,12 +330,34 @@ private fun ComposeSubtitleRenderer(
                     )
                 }
             }
-            SubtitleAnimation.NONE,
             SubtitleAnimation.TYPEWRITER,
             SubtitleAnimation.WORD_BY_WORD,
             -> {
-                SubtitlePill(
-                    text = displayText,
+                AnimatedContent(
+                    targetState = rawText.isNotBlank(),
+                    transitionSpec = {
+                        (scaleIn(initialScale = 0.92f, animationSpec = tween(180)) + fadeIn(tween(160))) togetherWith
+                            fadeOut(tween(140)) using
+                            SizeTransform(clip = false)
+                    },
+                    label = "subtitle_progressive_reveal",
+                ) { hasCue ->
+                    if (hasCue && displayText.isNotBlank()) {
+                        SubtitlePill(
+                            text = displayText,
+                            fontFamily = resolvedFontFamily,
+                            fontSize = targetSize,
+                            isBold = configuration.textBold,
+                            showBackground = configuration.showBackground,
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.size(1.dp))
+                    }
+                }
+            }
+            SubtitleAnimation.NONE -> {
+                SubtitleOrSpacer(
+                    text = rawText,
                     fontFamily = resolvedFontFamily,
                     fontSize = targetSize,
                     isBold = configuration.textBold,
@@ -335,6 +365,27 @@ private fun ComposeSubtitleRenderer(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SubtitleOrSpacer(
+    text: String,
+    fontFamily: androidx.compose.ui.text.font.FontFamily,
+    fontSize: Float,
+    isBold: Boolean,
+    showBackground: Boolean,
+) {
+    if (text.isNotBlank()) {
+        SubtitlePill(
+            text = text,
+            fontFamily = fontFamily,
+            fontSize = fontSize,
+            isBold = isBold,
+            showBackground = showBackground,
+        )
+    } else {
+        Spacer(modifier = Modifier.size(1.dp))
     }
 }
 

@@ -47,13 +47,16 @@ class VideoThumbnailDecoder(
 ) : Decoder {
 
     private val diskCacheKey: String
-        get() = options.diskCacheKey ?: run {
-            val metadata = source.metadata
-            when {
-                metadata is ContentMetadata -> metadata.uri.toAndroidUri().toString()
-                source.fileSystem === FileSystem.SYSTEM -> source.file().toFile().path
-                else -> error("Not supported")
+        get() {
+            val baseKey = options.diskCacheKey ?: run {
+                val metadata = source.metadata
+                when {
+                    metadata is ContentMetadata -> metadata.uri.toAndroidUri().toString()
+                    source.fileSystem === FileSystem.SYSTEM -> source.file().toFile().path
+                    else -> error("Not supported")
+                }
             }
+            return "${baseKey}_hq2"
         }
 
     @OptIn(ExperimentalCoilApi::class)
@@ -61,7 +64,7 @@ class VideoThumbnailDecoder(
         readFromDiskCache()?.use { snapshot ->
             val file = snapshot.data.toFile()
             val decodeOpts = BitmapFactory.Options().apply {
-                inPreferredConfig = Bitmap.Config.RGB_565
+                inPreferredConfig = Bitmap.Config.ARGB_8888
             }
             val cachedBitmap = runCatching {
                 file.inputStream().use { BitmapFactory.decodeStream(it, null, decodeOpts) }
@@ -74,15 +77,15 @@ class VideoThumbnailDecoder(
             }
         }
 
-        // Cache miss: decode fresh thumbnail with concurrency cap to prevent scroll stutter
-        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 320 }, options.size.height.pxOrElse { 200 })
-        val targetWidth = requestedDstSize.width.pxOrElse { 320 }.coerceIn(160, 360)
-        val targetHeight = requestedDstSize.height.pxOrElse { 200 }.coerceIn(100, 240)
+        // Cache miss: decode crisp HD thumbnail with concurrency cap to prevent scroll stutter
+        val requestedDstSize = computeDstSize(options.size.width.pxOrElse { 640 }, options.size.height.pxOrElse { 400 })
+        val targetWidth = requestedDstSize.width.pxOrElse { 640 }.coerceIn(320, 720)
+        val targetHeight = requestedDstSize.height.pxOrElse { 400 }.coerceIn(200, 450)
 
         val rawBitmap: Bitmap = thumbnailDecodeSemaphore.withPermit {
             // Fast path on API 29+ for content:// URIs using OS MediaStore thumbnail cache
             val metadata = source.metadata
-            if (SDK_INT >= 29 && metadata is ContentMetadata) {
+            if (SDK_INT >= 29 && metadata is ContentMetadata && strategy is ThumbnailStrategy.FirstFrame) {
                 runCatching {
                     options.context.contentResolver.loadThumbnail(
                         metadata.uri.toAndroidUri(),
@@ -100,7 +103,7 @@ class VideoThumbnailDecoder(
                     val embeddedPictureBitmap = embeddedPicture?.let { pictureBytes ->
                         val boundsOpts = BitmapFactory.Options().apply {
                             inJustDecodeBounds = true
-                            inPreferredConfig = Bitmap.Config.RGB_565
+                            inPreferredConfig = Bitmap.Config.ARGB_8888
                         }
                         BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, boundsOpts)
                         val sampleSize = DecodeUtils.calculateInSampleSize(
@@ -112,7 +115,7 @@ class VideoThumbnailDecoder(
                         )
                         val decodeOpts = BitmapFactory.Options().apply {
                             inSampleSize = sampleSize
-                            inPreferredConfig = Bitmap.Config.RGB_565
+                            inPreferredConfig = Bitmap.Config.ARGB_8888
                         }
                         BitmapFactory.decodeByteArray(pictureBytes, 0, pictureBytes.size, decodeOpts)
                     }
@@ -217,7 +220,7 @@ class VideoThumbnailDecoder(
         val editor = diskCache.value?.openEditor(diskCacheKey) ?: return
         try {
             editor.data.toFile().outputStream().use { output ->
-                inBitmap.compress(Bitmap.CompressFormat.JPEG, 75, output)
+                inBitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
             }
             editor.commit()
         } catch (_: Exception) {
@@ -241,7 +244,7 @@ class VideoThumbnailDecoder(
         val dstHeight = (scale * inBitmap.height).roundToInt().coerceAtLeast(1)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        val outBitmap = createBitmap(dstWidth, dstHeight, inBitmap.config ?: Bitmap.Config.RGB_565)
+        val outBitmap = createBitmap(dstWidth, dstHeight, inBitmap.config ?: Bitmap.Config.ARGB_8888)
         outBitmap.applyCanvas {
             scale(scale, scale)
             drawBitmap(inBitmap, 0f, 0f, paint)

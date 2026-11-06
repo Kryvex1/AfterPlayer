@@ -67,8 +67,12 @@ fun PlayerControls(
         Column {
             AnimatedVisibility(
                 visible = controlsVisibilityState.controlsVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = androidx.compose.animation.slideInVertically(
+                    animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                ) { -it / 2 } + fadeIn(androidx.compose.animation.core.tween(200)),
+                exit = androidx.compose.animation.slideOutVertically(
+                    animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                ) { -it / 2 } + fadeOut(androidx.compose.animation.core.tween(180)),
             ) {
                 ControlsTopView(
                     title = title,
@@ -85,8 +89,12 @@ fun PlayerControls(
             Spacer(modifier = Modifier.weight(1f))
             AnimatedVisibility(
                 visible = controlsVisibilityState.controlsVisible && !controlsVisibilityState.controlsLocked,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = androidx.compose.animation.slideInVertically(
+                    animationSpec = androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                ) { it / 2 } + fadeIn(androidx.compose.animation.core.tween(200)),
+                exit = androidx.compose.animation.slideOutVertically(
+                    animationSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                ) { it / 2 } + fadeOut(androidx.compose.animation.core.tween(180)),
             ) {
                 ControlsBottomView(
                     player = player,
@@ -100,6 +108,7 @@ fun PlayerControls(
                     videoContentScale = videoZoomAndContentScaleState.videoContentScale,
                     isPipSupported = isPipSupported,
                     showRemainingTime = playerPreferences.showRemainingTime,
+                    wavingTimeline = playerPreferences.wavingTimeline,
                     onToggleTimeDisplay = onToggleTimeDisplay,
                     onSeek = seekGestureState::onSeek,
                     onSeekEnd = seekGestureState::onSeekEnd,

@@ -59,6 +59,7 @@ class PlayerPreferencesViewModel(
             is PlayerPreferencesUiEvent.UpdateControlAutoHideTimeout -> updateControlAutoHideTimeout(action.value)
             is PlayerPreferencesUiEvent.ToggleUseMaterialYouControls -> toggleUseMaterialYouControls()
             is PlayerPreferencesUiEvent.ToggleShowStatusBar -> toggleShowStatusBar()
+            is PlayerPreferencesUiEvent.ToggleWavingTimeline -> toggleWavingTimeline()
         }
     }
 
@@ -165,6 +166,14 @@ class PlayerPreferencesViewModel(
             }
         }
     }
+
+    private fun toggleWavingTimeline() {
+        viewModelScope.launch {
+            preferencesRepository.updatePlayerPreferences {
+                it.copy(wavingTimeline = !it.wavingTimeline)
+            }
+        }
+    }
 }
 
 @Stable
@@ -195,4 +204,5 @@ sealed interface PlayerPreferencesUiEvent {
     data class UpdateControlAutoHideTimeout(val value: Int) : PlayerPreferencesUiEvent
     data object ToggleUseMaterialYouControls : PlayerPreferencesUiEvent
     data object ToggleShowStatusBar : PlayerPreferencesUiEvent
+    data object ToggleWavingTimeline : PlayerPreferencesUiEvent
 }

@@ -1,7 +1,6 @@
 package dev.anilbeesetti.nextplayer.core.ui.composables
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import dev.anilbeesetti.nextplayer.core.ui.R
 
@@ -15,25 +14,11 @@ fun PermissionMissingView(
 ) {
     if (isGranted) {
         content()
-    } else if (showRationale) {
-        PermissionRationaleDialog(
-            text = stringResource(
-                id = R.string.permission_info,
-                permission,
-            ),
-            onConfirmButtonClick = launchPermissionRequest,
-        )
     } else {
         PermissionDetailView(
-            text = stringResource(
-                id = R.string.permission_info,
-                permission,
-            ),
-            onRequestPermissionClick = launchPermissionRequest,
+            title = stringResource(id = R.string.storage_permission_required),
+            text = stringResource(id = R.string.storage_permission_description),
+            onRequestPermission = launchPermissionRequest,
         )
-
-        LaunchedEffect(Unit) {
-            launchPermissionRequest()
-        }
     }
 }

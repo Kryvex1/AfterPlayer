@@ -24,9 +24,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -75,6 +80,7 @@ fun ControlsBottomView(
     videoContentScale: VideoContentScale,
     isPipSupported: Boolean,
     showRemainingTime: Boolean,
+    wavingTimeline: Boolean = false,
     onToggleTimeDisplay: () -> Unit,
     onChaptersClick: () -> Unit,
     onVideoContentScaleClick: () -> Unit,
@@ -183,11 +189,42 @@ fun ControlsBottomView(
             }
         }
         val isNetworkStream = remember(player?.currentMediaItem) {
-            val scheme = player?.currentMediaItem?.localConfiguration?.uri?.scheme?.lowercase()
+            val uri = player?.currentMediaItem?.localConfiguration?.uri
+                ?: player?.currentMediaItem?.mediaId?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() }
+            val scheme = uri?.scheme?.lowercase()
             scheme != null && scheme != "file" && scheme != "content"
         }
+        var liveBufferedPositionMs by androidx.compose.runtime.remember(player, isNetworkStream) {
+            androidx.compose.runtime.mutableLongStateOf(if (isNetworkStream) (player?.bufferedPosition ?: 0L) else 0L)
+        }
+        var isPlaying by androidx.compose.runtime.remember(player) {
+            androidx.compose.runtime.mutableStateOf(player?.isPlaying == true)
+        }
+        androidx.compose.runtime.DisposableEffect(player) {
+            if (player == null) return@DisposableEffect onDispose {}
+            isPlaying = player.isPlaying
+            val listener = object : Player.Listener {
+                override fun onIsPlayingChanged(playing: Boolean) {
+                    isPlaying = playing
+                }
+            }
+            player.addListener(listener)
+            onDispose {
+                player.removeListener(listener)
+            }
+        }
+        androidx.compose.runtime.LaunchedEffect(player, isNetworkStream) {
+            if (player != null && isNetworkStream) {
+                while (true) {
+                    liveBufferedPositionMs = player.bufferedPosition
+                    kotlinx.coroutines.delay(250L)
+                }
+            } else {
+                liveBufferedPositionMs = 0L
+            }
+        }
         val bufferedPosition = if (isNetworkStream) {
-            (player?.bufferedPosition ?: 0L).coerceAtLeast(progressState.currentPositionMs).toFloat()
+            maxOf(liveBufferedPositionMs, player?.bufferedPosition ?: 0L, progressState.currentPositionMs).toFloat()
         } else {
             0f
         }
@@ -195,6 +232,8 @@ fun ControlsBottomView(
             position = progressState.currentPositionMs.toFloat(),
             duration = progressState.durationMs.toFloat(),
             bufferedPosition = bufferedPosition,
+            wavingTimeline = wavingTimeline,
+            isPlaying = isPlaying,
             chapters = chaptersState.chapters,
             onSeek = { onSeek(it.toLong()) },
             onSeekFinished = { onSeekEnd() },

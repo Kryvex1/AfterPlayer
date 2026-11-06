@@ -31,10 +31,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalIconButton
@@ -141,7 +143,8 @@ fun BoxScope.OverlayView(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.55f)
+                    .heightIn(max = (configuration.screenHeightDp * 0.75f).dp)
+                    .wrapContentHeight()
                     .noRippleClickable { /* consume click inside sheet */ },
             ) {
                 Column(
@@ -150,29 +153,32 @@ fun BoxScope.OverlayView(
                         .focusGroup()
                         .padding(end = endPadding),
                 ) {
+                    // Sleek drag handle for portrait bottom sheet
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp, bottom = 2.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(width = 36.dp, height = 4.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                        ) {}
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = title,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
                         )
-                        FilledTonalIconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(36.dp),
-                            shape = CircleShape,
-                        ) {
-                            Icon(
-                                imageVector = NextIcons.Close,
-                                contentDescription = "Close",
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
                     }
                     content()
                 }
@@ -193,34 +199,23 @@ fun BoxScope.OverlayView(
                     modifier = Modifier
                         .focusRequester(focusRequester)
                         .focusGroup()
-                        .padding(top = 16.dp)
+                        .padding(top = 14.dp)
                         .padding(end = endPadding),
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = title,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
                         )
-                        FilledTonalIconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(36.dp),
-                            shape = CircleShape,
-                        ) {
-                            Icon(
-                                imageVector = NextIcons.Close,
-                                contentDescription = "Close",
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
                     }
-                    Spacer(modifier = Modifier.size(8.dp))
+                    Spacer(modifier = Modifier.size(4.dp))
                     content()
                 }
             }

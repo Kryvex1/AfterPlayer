@@ -130,14 +130,6 @@ internal fun MediaPlayerControls(
                         .background(Color.Black.copy(alpha = 0.40f)),
                 )
             }
-            if (mediaPresentationState.isBuffering && !seekGestureState.isSeeking && !keyInputState.isSeeking) {
-                CircularProgressIndicator(
-                    Modifier
-                        .align(Alignment.Center)
-                        .size(72.dp),
-                )
-            }
-            PlayerGestureIndicators(tapGestureState)
             DpadSeekIndicator(
                 visible = keyInputState.isSeeking && keyInputState.seekOffsetMs != 0L,
                 offsetMs = keyInputState.seekOffsetMs,

@@ -5,23 +5,34 @@ import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +51,7 @@ import dev.anilbeesetti.nextplayer.feature.player.state.PlayerOrientationEffect
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberBrightnessState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberControlsVisibilityState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberErrorState
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberMediaPresentationState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberPictureInPictureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberSeekGestureState
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberTapGestureState
@@ -48,6 +60,7 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeAndBrightn
 import dev.anilbeesetti.nextplayer.feature.player.state.rememberVolumeState
 import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerErrorDialogs
+import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestureIndicators
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestures
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerVerticalGestureIndicators
 import dev.anilbeesetti.nextplayer.feature.player.ui.SubtitleConfiguration
@@ -96,6 +109,31 @@ internal fun MediaPlayerContent(
     }
     val context = LocalContext.current
     val activity = LocalActivity.current
+    if (!isPreview && volumeState != null) {
+        DisposableEffect(activity, volumeState) {
+            val playerActivity = activity as? PlayerActivity
+            playerActivity?.onVolumeKeyPressed = { keyCode ->
+                when (keyCode) {
+                    android.view.KeyEvent.KEYCODE_VOLUME_UP -> {
+                        volumeState.increaseVolume(showVolumePanel = false)
+                        true
+                    }
+                    android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                        volumeState.decreaseVolume(showVolumePanel = false)
+                        true
+                    }
+                    android.view.KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                        volumeState.updateVolumePercentage(0)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            onDispose {
+                playerActivity?.onVolumeKeyPressed = null
+            }
+        }
+    }
     val controlsVisibilityState = rememberControlsVisibilityState(
         player = player,
         hideAfter = playerPreferences.controllerAutoHideTimeout.seconds,
@@ -154,28 +192,6 @@ internal fun MediaPlayerContent(
             player = player,
             screenOrientation = playerPreferences.playerScreenOrientation,
         )
-        val playerActivity = activity as? PlayerActivity
-        androidx.compose.runtime.DisposableEffect(playerActivity, volumeState, volumeAndBrightnessGestureState) {
-            if (playerActivity == null || volumeState == null) {
-                return@DisposableEffect onDispose {}
-            }
-            val listener = androidx.core.util.Consumer<Int> { keyCode ->
-                when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_VOLUME_UP -> {
-                        volumeState.increaseVolume(showVolumePanel = false)
-                        volumeAndBrightnessGestureState?.triggerVolumeKeyIndicator()
-                    }
-                    android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                        volumeState.decreaseVolume(showVolumePanel = false)
-                        volumeAndBrightnessGestureState?.triggerVolumeKeyIndicator()
-                    }
-                }
-            }
-            playerActivity.addOnVolumeKeyPressedListener(listener)
-            onDispose {
-                playerActivity.removeOnVolumeKeyPressedListener(listener)
-            }
-        }
     }
     val errorState = rememberErrorState(player = player)
 
@@ -199,25 +215,43 @@ internal fun MediaPlayerContent(
     }
 
     val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val mediaPresentationState = rememberMediaPresentationState(player)
     var overlayView by remember { mutableStateOf<OverlayView?>(null) }
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isSidePanelOpen = overlayView != null && isLandscape
-    val videoScaleEndPadding by animateDpAsState(
-        targetValue = if (isSidePanelOpen) (configuration.screenWidthDp * 0.44f).dp else 0.dp,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "video_shrink_padding",
+    val videoShrinkProgress by animateFloatAsState(
+        targetValue = if (isSidePanelOpen) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "video_shrink_progress",
     )
 
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color(0xFF0A0A0E)),
     ) {
         if (pictureInPictureState != null) {
+            val scale = 1f - (0.46f * videoShrinkProgress)
+            val cornerRadius = (20f * videoShrinkProgress).dp
+            val leftOffsetPx = with(density) { (16.dp * videoShrinkProgress).toPx() }
+            val shadowElevationPx = with(density) { (16.dp * videoShrinkProgress).toPx() }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(end = videoScaleEndPadding),
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = TransformOrigin(0f, 0.5f)
+                        translationX = leftOffsetPx
+                        shape = RoundedCornerShape(cornerRadius)
+                        clip = videoShrinkProgress > 0.01f
+                        shadowElevation = shadowElevationPx
+                    }
+                    .background(Color.Black),
             ) {
                 PlayerContentFrame(
                     player = player,
@@ -238,6 +272,14 @@ internal fun MediaPlayerContent(
                         controlsVisible = controlsVisibilityState.controlsVisible,
                     ),
                 )
+                if (mediaPresentationState.isBuffering && !seekGestureState.isSeeking) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(68.dp),
+                    )
+                }
+                PlayerGestureIndicators(tapGestureState)
                 if (volumeAndBrightnessGestureState != null) {
                     PlayerGestures(
                         controlsVisibilityState = controlsVisibilityState,
@@ -283,8 +325,10 @@ internal fun MediaPlayerContent(
             },
         )
         if (volumeAndBrightnessGestureState != null && volumeState != null && brightnessState != null) {
+            val activeGestureOrKey = volumeAndBrightnessGestureState.activeGesture
+                ?: if (volumeState.showVolumeIndicator) dev.anilbeesetti.nextplayer.feature.player.state.VerticalGesture.VOLUME else null
             PlayerVerticalGestureIndicators(
-                activeGesture = volumeAndBrightnessGestureState.activeGesture,
+                activeGesture = activeGestureOrKey,
                 volumePercentage = volumeState.volumePercentage,
                 maxVolumePercentage = volumeState.maxVolumePercentage,
                 brightnessPercentage = brightnessState.brightnessPercentage,

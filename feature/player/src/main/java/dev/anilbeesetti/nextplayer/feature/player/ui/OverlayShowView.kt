@@ -37,6 +37,7 @@ fun BoxScope.OverlayShowView(
     onSubtitleOptionEvent: (SubtitleOptionsEvent) -> Unit = {},
     onVideoContentScaleChanged: (VideoContentScale) -> Unit = {},
 ) {
+    val isPortrait = androidx.compose.ui.platform.LocalConfiguration.current.isPortrait
     AnimatedVisibility(
         visible = overlayView != null,
         enter = fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)),
@@ -45,7 +46,7 @@ fun BoxScope.OverlayShowView(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(Color.Black.copy(alpha = 0.55f))
+                .background(Color.Black.copy(alpha = if (isPortrait) 0.52f else 0.0f))
                 .noRippleClickable(onClick = onDismiss),
         )
     }

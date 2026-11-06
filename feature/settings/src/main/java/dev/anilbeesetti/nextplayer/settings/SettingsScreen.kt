@@ -157,8 +157,8 @@ private enum class SettingRow(
         setting = Setting.SUBTITLE,
     ),
     GENERAL(
-        titleResId = R.string.general_name,
-        descriptionResId = R.string.general_description,
+        titleResId = R.string.advanced_name,
+        descriptionResId = R.string.advanced_description,
         icon = NextIcons.ExtraSettings,
         setting = Setting.GENERAL,
     ),

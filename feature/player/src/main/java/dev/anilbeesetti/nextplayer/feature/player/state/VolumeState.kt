@@ -29,7 +29,10 @@ import androidx.media3.session.MediaController
 import dev.anilbeesetti.nextplayer.feature.player.service.getIsLoudnessGainSupported
 import dev.anilbeesetti.nextplayer.feature.player.service.getLoudnessGain
 import dev.anilbeesetti.nextplayer.feature.player.service.setLoudnessGain
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(UnstableApi::class)
@@ -78,6 +81,20 @@ class VolumeState(
     var volumePercentage: Int by mutableIntStateOf(calculateVolumePercentage())
         private set
 
+    var showVolumeIndicator: Boolean by mutableStateOf(false)
+        private set
+
+    private var indicatorJob: Job? = null
+
+    private fun triggerVolumeIndicator() {
+        showVolumeIndicator = true
+        indicatorJob?.cancel()
+        indicatorJob = scope.launch {
+            delay(1100.milliseconds)
+            showVolumeIndicator = false
+        }
+    }
+
     fun syncWithSystem() {
         if (currentVolume > systemMaxVolume) return
         val systemVolume = audioManager.currentStreamVolume
@@ -96,11 +113,21 @@ class VolumeState(
     }
 
     fun increaseVolume(showVolumePanel: Boolean = false) {
-        setVolume(currentVolume + 1, showVolumePanel)
+        syncWithSystem()
+        val stepPercentage = (100f / systemMaxVolume).toInt().coerceAtLeast(5)
+        val nextPercentage = (volumePercentage + stepPercentage).coerceAtMost(maxVolumePercentage)
+        val targetVolume = ((nextPercentage * systemMaxVolume) / MAX_VOLUME_PERCENTAGE_NORMAL).coerceAtLeast(currentVolume + 1)
+        setVolume(targetVolume, showVolumePanel = false)
+        triggerVolumeIndicator()
     }
 
     fun decreaseVolume(showVolumePanel: Boolean = false) {
-        setVolume(currentVolume - 1, showVolumePanel)
+        syncWithSystem()
+        val stepPercentage = (100f / systemMaxVolume).toInt().coerceAtLeast(5)
+        val nextPercentage = (volumePercentage - stepPercentage).coerceAtLeast(0)
+        val targetVolume = ((nextPercentage * systemMaxVolume) / MAX_VOLUME_PERCENTAGE_NORMAL).coerceAtMost(currentVolume - 1)
+        setVolume(targetVolume, showVolumePanel = false)
+        triggerVolumeIndicator()
     }
 
     fun handleLifecycle(disposableEffectScope: DisposableEffectScope): DisposableEffectResult =
@@ -165,17 +192,10 @@ class VolumeState(
     }
 
     private fun setSystemVolume(volume: Int, showVolumePanel: Boolean) {
-        val targetVolume = volume.coerceIn(0, systemMaxVolume)
-        if (audioManager.currentStreamVolume == targetVolume && !showVolumePanel) return
-        val flags = if (showVolumePanel && showVolumePanelIfHeadsetIsOn && audioManager.isHeadsetOn) {
-            AudioManager.FLAG_SHOW_UI
-        } else {
-            0
-        }
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
-            targetVolume,
-            flags,
+            volume.coerceIn(0, systemMaxVolume),
+            0,
         )
     }
 
